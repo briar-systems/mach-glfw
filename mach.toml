@@ -291,10 +291,11 @@ isa = "*"
 abi = "*"
 export = true
 
+# the logical name matches std's, so a symbol both claim names one provider
 [link.libSystem]
 source = "system"
 name = "/usr/lib/libSystem.B.dylib"
-library = "/usr/lib/libSystem.B.dylib"
+library = "libSystem"
 symbols = [
     "__assert_rtn", "__bzero", "__memcpy_chk", "__sprintf_chk",
     "__stack_chk_fail", "__stack_chk_guard", "_NSConcreteGlobalBlock",
