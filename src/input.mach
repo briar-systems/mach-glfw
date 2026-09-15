@@ -5,8 +5,13 @@
 # glfw.mouse, and glfw.joystick.
 
 use glfw.c;
+use glfw.error;
+use glfw.error.Error;
 use glfw.window.Window;
 use std.types.bool.bool;
+use std.types.error.err;
+use std.types.option.opt;
+use std.types.result.res;
 use std.types.string.str;
 
 # input mode ids for get_input_mode/set_input_mode.
@@ -24,24 +29,9 @@ pub val CURSOR_CAPTURED: i32 = 0x00034004;
 
 # handle to a cursor image
 # ---
-# handle: opaque GLFWcursor pointer, nil when invalid
+# handle: opaque GLFWcursor pointer, never nil
 pub rec Cursor {
     handle: ptr;
-}
-
-# the nil Cursor, for restoring the default cursor
-# ---
-# ret: a Cursor with a nil handle
-pub fun no_cursor() Cursor {
-    ret Cursor{ handle: nil };
-}
-
-# whether a Cursor holds a live handle
-# ---
-# cursor: cursor to test
-# ret:    true if the handle is non-nil
-pub fun cursor_is_valid(cursor: Cursor) bool {
-    ret cursor.handle != nil;
 }
 
 # key callback (window, key, scancode, action, mods)
@@ -93,17 +83,19 @@ pub fun raw_mouse_motion_supported() bool {
 # ---
 # key:      a key.KEY_* token, or KEY_UNKNOWN to use the scancode
 # scancode: platform scancode, ignored unless key is KEY_UNKNOWN
-# ret:      GLFW-owned string, nil for non-printable keys
-pub fun get_key_name(key: i32, scancode: i32) str {
-    ret c.glfwGetKeyName(key, scancode);
+# ret:      GLFW-owned string, or none for non-printable keys
+pub fun get_key_name(key: i32, scancode: i32) opt[str] {
+    ret some_str(c.glfwGetKeyName(key, scancode));
 }
 
 # platform scancode of a key
 # ---
 # key: a key.KEY_* token
-# ret: scancode, or -1 on error
-pub fun get_key_scancode(key: i32) i32 {
-    ret c.glfwGetKeyScancode(key);
+# ret: scancode, or none if the key has no scancode or glfw refused the query
+pub fun get_key_scancode(key: i32) opt[i32] {
+    val scancode: i32 = c.glfwGetKeyScancode(key);
+    if (scancode == -1) { ret opt[i32].none{}; }
+    ret opt[i32].some{scancode};
 }
 
 # last reported state of a key
@@ -147,17 +139,19 @@ pub fun set_cursor_pos(window: Window, xpos: f64, ypos: f64) {
 # image: cursor image
 # xhot:  hotspot x, in pixels from the left
 # yhot:  hotspot y, in pixels from the top
-# ret:   the new Cursor; nil handle on failure
-pub fun create_cursor(image: *c.Image, xhot: i32, yhot: i32) Cursor {
-    ret Cursor{ handle: c.glfwCreateCursor(image, xhot, yhot) };
+# ret:   the new Cursor, or why glfw refused it
+pub fun create_cursor(image: *c.Image, xhot: i32, yhot: i32) res[Cursor, Error] {
+    c.glfwGetError(nil);
+    ret cursor_or_refusal(c.glfwCreateCursor(image, xhot, yhot));
 }
 
 # create a themed standard cursor
 # ---
 # shape: a mouse.*_CURSOR shape token
-# ret:   the new Cursor; nil handle on failure
-pub fun create_standard_cursor(shape: i32) Cursor {
-    ret Cursor{ handle: c.glfwCreateStandardCursor(shape) };
+# ret:   the new Cursor, or why glfw refused it
+pub fun create_standard_cursor(shape: i32) res[Cursor, Error] {
+    c.glfwGetError(nil);
+    ret cursor_or_refusal(c.glfwCreateStandardCursor(shape));
 }
 
 # destroy a cursor created with create_cursor or
@@ -171,9 +165,13 @@ pub fun destroy_cursor(cursor: Cursor) {
 # set the cursor image shown over the window's client area
 # ---
 # window: window to change
-# cursor: cursor to show, or no_cursor() for the default
-pub fun set_cursor(window: Window, cursor: Cursor) {
-    c.glfwSetCursor(window.handle, cursor.handle);
+# cursor: cursor to show, or none for the default
+pub fun set_cursor(window: Window, cursor: opt[Cursor]) {
+    if (sel cursor.some) {
+        c.glfwSetCursor(window.handle, cursor.some.handle);
+        ret;
+    }
+    c.glfwSetCursor(window.handle, nil);
 }
 
 # install the key callback
@@ -242,18 +240,17 @@ pub fun set_drop_callback(window: Window, callback: DropFun) {
 
 # set the system clipboard text
 # ---
-# window: deprecated, any valid window or no_window()
 # string: UTF-8 text, copied before return
-pub fun set_clipboard_string(window: Window, string: str) {
-    c.glfwSetClipboardString(window.handle, string);
+pub fun set_clipboard_string(string: str) {
+    # glfw 3.4 ignores the window argument
+    c.glfwSetClipboardString(nil, string);
 }
 
 # read the system clipboard text
 # ---
-# window: deprecated, any valid window or no_window()
-# ret:    GLFW-owned string, nil if unavailable
-pub fun get_clipboard_string(window: Window) str {
-    ret c.glfwGetClipboardString(window.handle);
+# ret: GLFW-owned string, or none if the clipboard holds no text
+pub fun get_clipboard_string() opt[str] {
+    ret some_str(c.glfwGetClipboardString(nil));
 }
 
 # whether a joystick is connected
@@ -267,8 +264,8 @@ pub fun joystick_present(jid: i32) bool {
 # axis values of a joystick, each -1 to 1
 # ---
 # jid:   a joystick.JOYSTICK_* id
-# count: receives the axis count
-# ret:   GLFW-owned array, nil if absent
+# count: receives the axis count, zero if absent
+# ret:   GLFW-owned array, count entries long
 pub fun get_joystick_axes(jid: i32, count: *i32) *f32 {
     ret c.glfwGetJoystickAxes(jid, count);
 }
@@ -276,8 +273,8 @@ pub fun get_joystick_axes(jid: i32, count: *i32) *f32 {
 # button states of a joystick
 # ---
 # jid:   a joystick.JOYSTICK_* id
-# count: receives the button count
-# ret:   GLFW-owned array of key.PRESS/key.RELEASE, nil if absent
+# count: receives the button count, zero if absent
+# ret:   GLFW-owned array of key.PRESS/key.RELEASE, count entries long
 pub fun get_joystick_buttons(jid: i32, count: *i32) *u8 {
     ret c.glfwGetJoystickButtons(jid, count);
 }
@@ -285,8 +282,8 @@ pub fun get_joystick_buttons(jid: i32, count: *i32) *u8 {
 # hat states of a joystick
 # ---
 # jid:   a joystick.JOYSTICK_* id
-# count: receives the hat count
-# ret:   GLFW-owned array of joystick.HAT_* bitfields, nil if absent
+# count: receives the hat count, zero if absent
+# ret:   GLFW-owned array of joystick.HAT_* bitfields, count entries long
 pub fun get_joystick_hats(jid: i32, count: *i32) *u8 {
     ret c.glfwGetJoystickHats(jid, count);
 }
@@ -294,17 +291,17 @@ pub fun get_joystick_hats(jid: i32, count: *i32) *u8 {
 # human-readable joystick name
 # ---
 # jid: a joystick.JOYSTICK_* id
-# ret: GLFW-owned string, nil if absent
-pub fun get_joystick_name(jid: i32) str {
-    ret c.glfwGetJoystickName(jid);
+# ret: GLFW-owned string, or none if absent
+pub fun get_joystick_name(jid: i32) opt[str] {
+    ret some_str(c.glfwGetJoystickName(jid));
 }
 
 # SDL-compatible joystick GUID
 # ---
 # jid: a joystick.JOYSTICK_* id
-# ret: GLFW-owned string, nil if absent
-pub fun get_joystick_guid(jid: i32) str {
-    ret c.glfwGetJoystickGUID(jid);
+# ret: GLFW-owned string, or none if absent
+pub fun get_joystick_guid(jid: i32) opt[str] {
+    ret some_str(c.glfwGetJoystickGUID(jid));
 }
 
 # attach a user pointer to the joystick slot
@@ -341,24 +338,37 @@ pub fun set_joystick_callback(callback: JoystickFun) {
 # add SDL_GameControllerDB mappings
 # ---
 # string: mapping lines in SDL format
-# ret:    true on success
-pub fun update_gamepad_mappings(string: str) bool {
-    ret c.glfwUpdateGamepadMappings(string) != 0;
+# ret:    ok, or why glfw refused the mappings
+pub fun update_gamepad_mappings(string: str) err[Error] {
+    c.glfwGetError(nil);
+    if (c.glfwUpdateGamepadMappings(string) == 0) { ret err[Error].err{error.take_refusal()}; }
+    ret err[Error].ok{};
 }
 
 # human-readable gamepad name from the mapping
 # ---
 # jid: a joystick.JOYSTICK_* id
-# ret: GLFW-owned string, nil if not a gamepad
-pub fun get_gamepad_name(jid: i32) str {
-    ret c.glfwGetGamepadName(jid);
+# ret: GLFW-owned string, or none if not a gamepad
+pub fun get_gamepad_name(jid: i32) opt[str] {
+    ret some_str(c.glfwGetGamepadName(jid));
 }
 
 # read the joystick through its gamepad mapping
 # ---
-# jid:   a joystick.JOYSTICK_* id
-# state: receives the mapped state
-# ret:   true if the joystick is a connected gamepad
-pub fun get_gamepad_state(jid: i32, state: *c.Gamepadstate) bool {
-    ret c.glfwGetGamepadState(jid, state) != 0;
+# jid: a joystick.JOYSTICK_* id
+# ret: the mapped state, or none if the joystick is not a connected gamepad
+pub fun get_gamepad_state(jid: i32) opt[c.Gamepadstate] {
+    var state: c.Gamepadstate;
+    if (c.glfwGetGamepadState(jid, ?state) == 0) { ret opt[c.Gamepadstate].none{}; }
+    ret opt[c.Gamepadstate].some{state};
+}
+
+fun cursor_or_refusal(handle: ptr) res[Cursor, Error] {
+    if (handle == nil) { ret res[Cursor, Error].err{error.take_refusal()}; }
+    ret res[Cursor, Error].ok{Cursor{ handle: handle }};
+}
+
+fun some_str(string: str) opt[str] {
+    if (string == nil) { ret opt[str].none{}; }
+    ret opt[str].some{string};
 }

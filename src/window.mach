@@ -1,17 +1,20 @@
 # window lifecycle, attributes, context, and window callbacks
 #
-# a Window is a by-value wrapper around the opaque GLFWwindow handle.
-# fallible constructors return a nil-handle Window; check with is_valid
-# and query glfw.core.get_error for the cause.
+# a Window is a by-value wrapper around a live GLFWwindow handle. creation
+# reports a refusal as an error.Error, and an optional window is opt[Window].
 
 use glfw.c;
+use glfw.error;
+use glfw.error.Error;
 use glfw.monitor.Monitor;
 use std.types.bool.bool;
+use std.types.option.opt;
+use std.types.result.res;
 use std.types.string.str;
 
 # handle to a GLFW window and its context
 # ---
-# handle: opaque GLFWwindow pointer, nil when invalid
+# handle: opaque GLFWwindow pointer, never nil
 pub rec Window {
     handle: ptr;
 }
@@ -35,27 +38,12 @@ pub def FramebufferSizeFun: fun(ptr, i32, i32);
 # content scale callback (window, xscale, yscale)
 pub def WindowContentScaleFun: fun(ptr, f32, f32);
 
-# the nil Window, for optional window arguments
-# ---
-# ret: a Window with a nil handle
-pub fun no_window() Window {
-    ret Window{ handle: nil };
-}
-
 # rewrap a raw handle received in a callback
 # ---
 # handle: opaque GLFWwindow pointer
 # ret:    the wrapped Window
 pub fun window_from_handle(handle: ptr) Window {
     ret Window{ handle: handle };
-}
-
-# whether a Window holds a live handle
-# ---
-# window: window to test
-# ret:    true if the handle is non-nil
-pub fun window_is_valid(window: Window) bool {
-    ret window.handle != nil;
 }
 
 # reset all window hints to their defaults
@@ -82,17 +70,20 @@ pub fun window_hint_string(hint: i32, value: str) {
 
 # create a window and its context
 #
-# pass a monitor for fullscreen, no_monitor() for windowed; pass another
-# window in share to share its context, no_window() otherwise.
+# pass a monitor for fullscreen, none for windowed. pass another window in
+# share to share its context, none otherwise.
 # ---
 # width:   desired width in screen coordinates
 # height:  desired height in screen coordinates
 # title:   initial UTF-8 title
-# monitor: monitor for fullscreen, or no_monitor() for windowed
-# share:   window whose context to share, or no_window()
-# ret:     the new Window; nil handle on failure
-pub fun create_window(width: i32, height: i32, title: str, monitor: Monitor, share: Window) Window {
-    ret Window{ handle: c.glfwCreateWindow(width, height, title, monitor.handle, share.handle) };
+# monitor: monitor for fullscreen, or none for windowed
+# share:   window whose context to share, or none
+# ret:     the new Window, or why glfw refused it
+pub fun create_window(width: i32, height: i32, title: str, monitor: opt[Monitor], share: opt[Window]) res[Window, Error] {
+    c.glfwGetError(nil);
+    val handle: ptr = c.glfwCreateWindow(width, height, title, monitor_handle(monitor), window_handle(share));
+    if (handle == nil) { ret res[Window, Error].err{error.take_refusal()}; }
+    ret res[Window, Error].ok{Window{ handle: handle }};
 }
 
 # create_window sugar for the common windowed case
@@ -100,9 +91,9 @@ pub fun create_window(width: i32, height: i32, title: str, monitor: Monitor, sha
 # width:  desired width in screen coordinates
 # height: desired height in screen coordinates
 # title:  initial UTF-8 title
-# ret:    the new Window; nil handle on failure
-pub fun open_window(width: i32, height: i32, title: str) Window {
-    ret create_window(width, height, title, Monitor{ handle: nil }, no_window());
+# ret:    the new Window, or why glfw refused it
+pub fun open_window(width: i32, height: i32, title: str) res[Window, Error] {
+    ret create_window(width, height, title, opt[Monitor].none{}, opt[Window].none{});
 }
 
 # destroy a window and its context
@@ -131,9 +122,12 @@ pub fun set_window_should_close(window: Window, value: bool) {
 # current UTF-8 window title
 # ---
 # window: window to query
-# ret:    GLFW-owned string, valid until the title changes
-pub fun get_window_title(window: Window) str {
-    ret c.glfwGetWindowTitle(window.handle);
+# ret:    GLFW-owned string, valid until the title changes, or none if glfw
+#         refused the query
+pub fun get_window_title(window: Window) opt[str] {
+    val title: str = c.glfwGetWindowTitle(window.handle);
+    if (title == nil) { ret opt[str].none{}; }
+    ret opt[str].some{title};
 }
 
 # set the UTF-8 window title
@@ -308,22 +302,24 @@ pub fun request_window_attention(window: Window) {
 # monitor of a fullscreen window
 # ---
 # window: window to query
-# ret:    the Monitor; nil handle for windowed mode
-pub fun get_window_monitor(window: Window) Monitor {
-    ret Monitor{ handle: c.glfwGetWindowMonitor(window.handle) };
+# ret:    the Monitor, or none for windowed mode
+pub fun get_window_monitor(window: Window) opt[Monitor] {
+    val handle: ptr = c.glfwGetWindowMonitor(window.handle);
+    if (handle == nil) { ret opt[Monitor].none{}; }
+    ret opt[Monitor].some{Monitor{ handle: handle }};
 }
 
 # set fullscreen or windowed mode
 # ---
 # window:       window to change
-# monitor:      monitor for fullscreen, or no_monitor() for windowed
+# monitor:      monitor for fullscreen, or none for windowed
 # xpos:         windowed-mode x position
 # ypos:         windowed-mode y position
 # width:        new width
 # height:       new height
 # refresh_rate: fullscreen refresh rate, or hint.DONT_CARE
-pub fun set_window_monitor(window: Window, monitor: Monitor, xpos: i32, ypos: i32, width: i32, height: i32, refresh_rate: i32) {
-    c.glfwSetWindowMonitor(window.handle, monitor.handle, xpos, ypos, width, height, refresh_rate);
+pub fun set_window_monitor(window: Window, monitor: opt[Monitor], xpos: i32, ypos: i32, width: i32, height: i32, refresh_rate: i32) {
+    c.glfwSetWindowMonitor(window.handle, monitor_handle(monitor), xpos, ypos, width, height, refresh_rate);
 }
 
 # read a window attribute. see glfw.hint for ids
@@ -362,16 +358,18 @@ pub fun get_window_user_pointer(window: Window) ptr {
 
 # bind the window's context to this thread
 # ---
-# window: window whose context to bind, or no_window() to release
-pub fun make_context_current(window: Window) {
-    c.glfwMakeContextCurrent(window.handle);
+# window: window whose context to bind, or none to release the current one
+pub fun make_context_current(window: opt[Window]) {
+    c.glfwMakeContextCurrent(window_handle(window));
 }
 
 # window whose context is current on this thread
 # ---
-# ret: the current Window; nil handle if none
-pub fun get_current_context() Window {
-    ret Window{ handle: c.glfwGetCurrentContext() };
+# ret: the current Window, or none
+pub fun get_current_context() opt[Window] {
+    val handle: ptr = c.glfwGetCurrentContext();
+    if (handle == nil) { ret opt[Window].none{}; }
+    ret opt[Window].some{Window{ handle: handle }};
 }
 
 # swap the window's front and back buffers
@@ -451,4 +449,14 @@ pub fun set_framebuffer_size_callback(window: Window, callback: FramebufferSizeF
 # callback: handler, or nil cast to the callback type (e.g. nil::WindowSizeFun) to clear
 pub fun set_window_content_scale_callback(window: Window, callback: WindowContentScaleFun) {
     c.glfwSetWindowContentScaleCallback(window.handle, callback);
+}
+
+fun window_handle(window: opt[Window]) ptr {
+    if (sel window.some) { ret window.some.handle; }
+    ret nil;
+}
+
+fun monitor_handle(monitor: opt[Monitor]) ptr {
+    if (sel monitor.some) { ret monitor.some.handle; }
+    ret nil;
 }
