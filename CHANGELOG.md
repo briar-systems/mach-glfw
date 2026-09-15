@@ -13,8 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   declare this project as `[dep.glfw]`.
 - manifest: A default `glfw` static library artifact rooted at `glfw.mach` binds
   a bare `use glfw;`. The smoke executable is now the `demo` artifact
-  (`bin/demo`). Windows CI builds release only, since Mach 5.0.4 has no COFF
-  debug-info model.
+  (`bin/demo`).
 - api: **Breaking.** Refusals and absence are tags instead of sentinels. The raw
   `glfw.c` layer is unchanged.
   - module `glfw.err` and its code constants are replaced by `glfw.error`:

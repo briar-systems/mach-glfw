@@ -247,12 +247,11 @@ demo artifact's `link` list to build against an installed GLFW ≥ 3.4
 (`pacman -S glfw`, `apt install libglfw3-dev`, …) instead of the vendored
 source.
 
-CI builds both profiles on Linux and Darwin, and the release profile on
-Windows, since Mach 5.0.4 registers no debug-info model for COFF. Linux and Darwin run
+CI builds both profiles on all three operating systems. Linux and Darwin run
 `glfwInit` through the demo's `--smoke` mode; the Darwin lane exercises both
 the vendored archive and the system dylib. Windows is cross-built from Linux
 for exact PE import/base-relocation inspection and built again on a native
-Windows runner, where the release build executes the real `glfwInit` path. Darwin
+Windows runner, where both profiles execute the real `glfwInit` path. Darwin
 builds run natively because the Apple SDK needed by the Objective-C backend
 cannot be redistributed to a Linux cross-runner.
 

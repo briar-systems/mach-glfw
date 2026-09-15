@@ -104,11 +104,12 @@ jobs:
         run: |
           set -euo pipefail
           mach dep pull .
-          # mach 5.0.4 registers no debug model for coff and refuses a debug
-          # profile on windows, so only release is built here
+          mach build . --target windows --profile debug
           mach build . --target windows --profile release
-          tools/check-windows-pe.sh out/windows/release/bin/demo
-          for profile in release; do
+          tools/check-windows-pe.sh \
+            out/windows/debug/bin/demo \
+            out/windows/release/bin/demo
+          for profile in debug release; do
             llvm-nm --defined-only "out/windows/$profile/vendor/glfw/libglfw.a" \
               > "$RUNNER_TEMP/glfw-$profile.nm"
             grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
@@ -156,9 +157,9 @@ jobs:
         run: |
           set -euo pipefail
           mach.exe dep pull .
-          # mach 5.0.4 registers no debug model for coff, see the cross-build job
+          mach.exe build . --target windows --profile debug
           mach.exe build . --target windows --profile release
-          for profile in release; do
+          for profile in debug release; do
             exe="out/windows/$profile/bin/demo"
             "$exe" --smoke | tee "$RUNNER_TEMP/glfw-native-$profile.log"
             grep -q '^GLFW 3\.4\.0$' "$RUNNER_TEMP/glfw-native-$profile.log"
