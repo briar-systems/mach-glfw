@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and UCRT imports so Windows builds remain self-contained.
 - link: Attributed the vendored Cocoa backend's foreign imports to libSystem,
   libobjc, and the Darwin frameworks that provide them.
+- build: `build-glfw.sh` compiles into a scratch directory, so the step writes
+  only its declared archive under the output tree.
 
 ### Changed
 - manifest: Re-touched to RFC-exact totality per mach#1964/mach#1979.
@@ -61,10 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     out-param.
   - `set_clipboard_string()` and `get_clipboard_string()` drop the window
     argument GLFW 3.4 ignores.
-
-### Fixed
-- build: `build-glfw.sh` compiles into a scratch directory, so the step writes
-  only its declared archive under the output tree.
 
 ## [0.3.0] - 2026-07-07
 
