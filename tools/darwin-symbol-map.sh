@@ -105,7 +105,7 @@ while read -r name count; do
     echo "symbols_for_$name = ["
     # strip exactly one leading underscore: `symbols` is source-level and mach
     # re-applies the target's prefix itself
-    sed 's/^_//' "$work/claim.$name" | sed 's/^/    "/; s/$/",/'
+    sed 's/^_//' "$work/claim.$name" | "$(dirname "$0")/pack-symbols.sh"
     echo "]"
     echo
 done < "$work/out"
