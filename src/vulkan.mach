@@ -10,14 +10,14 @@
 # platform regardless of pointer width. Typing it here would force a dependency
 # on a Vulkan binding, and this library has none.
 
-use std.types.bool.bool;
-use std.types.option.opt;
-use std.types.result.res;
-use std.types.string.str;
 use glfw.c;
 use glfw.error;
 use glfw.error.Error;
 use glfw.window.Window;
+use std.types.bool.bool;
+use std.types.option.opt;
+use std.types.result.res;
+use std.types.string.str;
 
 # Why a Vulkan surface could not be created.
 # ---

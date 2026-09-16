@@ -19,9 +19,9 @@ generate() {
 # glfw.create_window(), glfw.KEY_ESCAPE, and so on. the split modules
 # (glfw.core, glfw.window, ...) remain importable individually.
 
-use glfw.c;
 EOF
-    for m in $MODULES; do printf 'use glfw.%s;\n' "$m"; done
+    # mach fmt orders imports, so the generated block is emitted in that order
+    for m in c $MODULES; do printf 'use glfw.%s;\n' "$m"; done | LC_ALL=C sort
     printf '\nfwd c.Vidmode;\nfwd c.Gammaramp;\nfwd c.Image;\nfwd c.Gamepadstate;\n'
     for m in $MODULES; do
         grep -oE '^pub (val|fun|rec|def|tag) [A-Za-z_][A-Za-z0-9_]*' "src/$m.mach" |

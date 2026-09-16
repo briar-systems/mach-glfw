@@ -365,7 +365,7 @@ pub fun get_gamepad_state(jid: i32) opt[c.Gamepadstate] {
 
 fun cursor_or_refusal(handle: ptr) res[Cursor, Error] {
     if (handle == nil) { ret res[Cursor, Error].err{error.take_refusal()}; }
-    ret res[Cursor, Error].ok{Cursor{ handle: handle }};
+    ret res[Cursor, Error].ok{Cursor{handle: handle}};
 }
 
 fun some_str(string: str) opt[str] {

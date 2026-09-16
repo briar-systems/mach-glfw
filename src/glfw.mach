@@ -10,15 +10,15 @@
 
 use glfw.c;
 use glfw.core;
-use glfw.window;
-use glfw.monitor;
-use glfw.input;
-use glfw.key;
-use glfw.hint;
 use glfw.error;
-use glfw.mouse;
+use glfw.hint;
+use glfw.input;
 use glfw.joystick;
+use glfw.key;
+use glfw.monitor;
+use glfw.mouse;
 use glfw.vulkan;
+use glfw.window;
 
 fwd c.Vidmode;
 fwd c.Gammaramp;
