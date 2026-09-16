@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- tools: `darwin-symbol-map.sh` packs each generated `symbols` array the way
+  the manifest lays it out, so the output pastes straight into `mach.toml`.
+  The packing lives in `tools/pack-symbols.sh`, and CI checks that its output
+  parses and round-trips. Based on #41 by @Angluca.
+
 ## [0.5.0] - 2026-09-16
 
 ### Changed
