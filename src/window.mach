@@ -43,7 +43,7 @@ pub def WindowContentScaleFun: fun(ptr, f32, f32);
 # handle: opaque GLFWwindow pointer
 # ret:    the wrapped Window
 pub fun window_from_handle(handle: ptr) Window {
-    ret Window{ handle: handle };
+    ret Window{handle: handle};
 }
 
 # reset all window hints to their defaults
@@ -83,7 +83,7 @@ pub fun create_window(width: i32, height: i32, title: str, monitor: opt[Monitor]
     c.glfwGetError(nil);
     val handle: ptr = c.glfwCreateWindow(width, height, title, monitor_handle(monitor), window_handle(share));
     if (handle == nil) { ret res[Window, Error].err{error.take_refusal()}; }
-    ret res[Window, Error].ok{Window{ handle: handle }};
+    ret res[Window, Error].ok{Window{handle: handle}};
 }
 
 # create_window sugar for the common windowed case
@@ -306,7 +306,7 @@ pub fun request_window_attention(window: Window) {
 pub fun get_window_monitor(window: Window) opt[Monitor] {
     val handle: ptr = c.glfwGetWindowMonitor(window.handle);
     if (handle == nil) { ret opt[Monitor].none{}; }
-    ret opt[Monitor].some{Monitor{ handle: handle }};
+    ret opt[Monitor].some{Monitor{handle: handle}};
 }
 
 # set fullscreen or windowed mode
@@ -369,7 +369,7 @@ pub fun make_context_current(window: opt[Window]) {
 pub fun get_current_context() opt[Window] {
     val handle: ptr = c.glfwGetCurrentContext();
     if (handle == nil) { ret opt[Window].none{}; }
-    ret opt[Window].some{Window{ handle: handle }};
+    ret opt[Window].some{Window{handle: handle}};
 }
 
 # swap the window's front and back buffers

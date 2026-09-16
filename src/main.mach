@@ -4,14 +4,14 @@
 # through the context's proc loader, and animates the clear color until
 # the window is closed or ESC is pressed.
 
+use glfw.glfw;
+use std.print;
 use std.runtime;
 use std.types.bool.true;
 use std.types.error.err;
 use std.types.option.opt;
 use std.types.result.res;
 use std.types.string.str_equals;
-use print: std.print;
-use glfw.glfw;
 
 # glClearColor(red, green, blue, alpha)
 def GlClearColorFun: fun(f32, f32, f32, f32);
@@ -43,7 +43,7 @@ fun main(argc: i64, argv: **u8) i64 {
 
     var major: i32 = 0;
     var minor: i32 = 0;
-    var rev: i32 = 0;
+    var rev:   i32 = 0;
     glfw.get_version(?major, ?minor, ?rev);
     print.printf("GLFW {}.{}.{}\n", major::i64, minor::i64, rev::i64);
 
@@ -78,10 +78,10 @@ fun main(argc: i64, argv: **u8) i64 {
         ret 1;
     }
     val clear_color: GlClearColorFun = clear_color_address.some:~GlClearColorFun;
-    val clear: GlClearFun = clear_address.some:~GlClearFun;
+    val clear:       GlClearFun      = clear_address.some:~GlClearFun;
 
     for (!glfw.window_should_close(w)) {
-        val t: f64 = glfw.get_time();
+        val t:     f64 = glfw.get_time();
         val phase: f64 = (t * 0.25) % 1.0;
         clear_color(phase::f32, 0.3, 1.0 - phase::f32, 1.0);
         clear(GL_COLOR_BUFFER_BIT);

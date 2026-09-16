@@ -173,7 +173,7 @@ test "core: error callback fires with not_initialized before init" {
     c.glfwCreateWindow(1, 1, "t", nil, nil);
     set_error_callback(nil::ErrorFun);
     val reported: opt[Error] = error.error_from_code(test_cb_code::i32);
-    if (!sel reported.some) { ret 1; }
+    if (!sel reported.some)                 { ret 1; }
     if (!sel reported.some.not_initialized) { ret 2; }
     val taken: Error = error.take_refusal();
     if (!sel taken.not_initialized) { ret 3; }
@@ -185,7 +185,7 @@ test "core: error callback fires with not_initialized before init" {
 test "core: get_version matches linked 3.x" {
     var major: i32 = 0;
     var minor: i32 = 0;
-    var rev: i32 = 0;
+    var rev:   i32 = 0;
     get_version(?major, ?minor, ?rev);
     if (major != 3) { ret 1; }
     ret 0;

@@ -88,14 +88,14 @@ test "error: codes classify to their cases" {
     val none: opt[Error] = error_from_code(0);
     if (!sel none.none) { ret 1; }
     val first: opt[Error] = error_from_code(0x00010001);
-    if (!sel first.some) { ret 2; }
+    if (!sel first.some)                 { ret 2; }
     if (!sel first.some.not_initialized) { ret 3; }
     val last: opt[Error] = error_from_code(0x0001000E);
-    if (!sel last.some) { ret 4; }
+    if (!sel last.some)                      { ret 4; }
     if (!sel last.some.platform_unavailable) { ret 5; }
     val novel: opt[Error] = error_from_code(0x0001000F);
-    if (!sel novel.some) { ret 6; }
-    if (!sel novel.some.unrecognized) { ret 7; }
+    if (!sel novel.some)                       { ret 6; }
+    if (!sel novel.some.unrecognized)          { ret 7; }
     if (novel.some.unrecognized != 0x0001000F) { ret 8; }
     ret 0;
 }

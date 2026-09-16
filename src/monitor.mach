@@ -24,7 +24,7 @@ pub def MonitorFun: fun(ptr, i32);
 # handle: opaque GLFWmonitor pointer
 # ret:    the wrapped Monitor
 pub fun monitor_from_handle(handle: ptr) Monitor {
-    ret Monitor{ handle: handle };
+    ret Monitor{handle: handle};
 }
 
 # array of all connected monitors
@@ -41,7 +41,7 @@ pub fun get_monitors(count: *i32) *ptr {
 pub fun get_primary_monitor() opt[Monitor] {
     val handle: ptr = c.glfwGetPrimaryMonitor();
     if (handle == nil) { ret opt[Monitor].none{}; }
-    ret opt[Monitor].some{Monitor{ handle: handle }};
+    ret opt[Monitor].some{Monitor{handle: handle}};
 }
 
 # position of the monitor on the virtual desktop
