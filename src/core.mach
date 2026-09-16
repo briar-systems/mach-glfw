@@ -1,12 +1,15 @@
 # library lifecycle, events, timing, and context management
 #
-# wraps initialization, the event loop, the timer, the OpenGL context
-# plumbing, and the error query. all functions are thin wrappers over
-# glfw.c with mach-idiomatic types.
+# wraps initialization, the event loop, the timer, and the OpenGL context
+# plumbing. all functions are thin wrappers over glfw.c with mach-idiomatic
+# types. the error query lives in glfw.error.
 
 use glfw.c;
-use glfw.err;
+use glfw.error;
+use glfw.error.Error;
 use std.types.bool.bool;
+use std.types.error.err;
+use std.types.option.opt;
 use std.types.string.str;
 
 # connection events delivered to monitor and joystick callbacks.
@@ -18,9 +21,11 @@ pub def ErrorFun: fun(i32, *u8);
 
 # initialize the GLFW library. call before most other functions
 # ---
-# ret: true on success
-pub fun init() bool {
-    ret c.glfwInit() != 0;
+# ret: ok, or why no platform could be initialized
+pub fun init() err[Error] {
+    c.glfwGetError(nil);
+    if (c.glfwInit() == 0) { ret err[Error].err{error.take_refusal()}; }
+    ret err[Error].ok{};
 }
 
 # destroy all windows and free GLFW resources
@@ -67,20 +72,10 @@ pub fun platform_supported(platform: i32) bool {
     ret c.glfwPlatformSupported(platform) != 0;
 }
 
-# code and description of the last error on this thread
-#
-# clears the stored error. the description pointer is valid until the
-# next error or library deinitialization; pass nil to skip it.
-# ---
-# description: receives a pointer to the error description, or nil
-# ret:         an err.* code, err.NO_ERROR if none
-pub fun get_error(description: **u8) i32 {
-    ret c.glfwGetError(description);
-}
-
 # install the global error callback
 #
-# callable before init. the previous callback is dropped.
+# callable before init. the previous callback is dropped. the callback receives
+# the raw code, which error.error_from_code classifies, and the description.
 # ---
 # callback: error handler, or nil::ErrorFun to clear
 pub fun set_error_callback(callback: ErrorFun) {
@@ -156,9 +151,11 @@ pub fun extension_supported(extension: str) bool {
 # context. reinterpret the result as the proper fun type before calling
 # ---
 # procname: function name
-# ret:      function address, or nil
-pub fun get_proc_address(procname: str) ptr {
-    ret c.glfwGetProcAddress(procname);
+# ret:      function address, or none if the context does not provide it
+pub fun get_proc_address(procname: str) opt[ptr] {
+    val address: ptr = c.glfwGetProcAddress(procname);
+    if (address == nil) { ret opt[ptr].none{}; }
+    ret opt[ptr].some{address};
 }
 
 var test_cb_code: i64 = 0;
@@ -169,24 +166,26 @@ fun test_error_cb(code: i32, desc: *u8) {
 
 # display-free: relies on GLFW being uninitialized, so it must not run
 # after any test that calls init().
-test "core: error callback fires with NOT_INITIALIZED before init" {
-    var desc: *u8 = nil;
+test "core: error callback fires with not_initialized before init" {
     test_cb_code = 0;
     set_error_callback(test_error_cb);
     c.glfwGetError(nil);
     c.glfwCreateWindow(1, 1, "t", nil, nil);
     set_error_callback(nil::ErrorFun);
-    if (test_cb_code != err.NOT_INITIALIZED::i64) { ret 1; }
-    val code: i32 = get_error(?desc);
-    if (code != err.NOT_INITIALIZED) { ret 1; }
-    if (desc == nil) { ret 1; }
+    val reported: opt[Error] = error.error_from_code(test_cb_code::i32);
+    if (!sel reported.some)                 { ret 1; }
+    if (!sel reported.some.not_initialized) { ret 2; }
+    val taken: Error = error.take_refusal();
+    if (!sel taken.not_initialized) { ret 3; }
+    val cleared: opt[Error] = error.take_error();
+    if (!sel cleared.none) { ret 4; }
     ret 0;
 }
 
 test "core: get_version matches linked 3.x" {
     var major: i32 = 0;
     var minor: i32 = 0;
-    var rev: i32 = 0;
+    var rev:   i32 = 0;
     get_version(?major, ?minor, ?rev);
     if (major != 3) { ret 1; }
     ret 0;

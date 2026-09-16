@@ -4,11 +4,14 @@
 # through the context's proc loader, and animates the clear color until
 # the window is closed or ESC is pressed.
 
+use glfw.glfw;
+use std.print;
 use std.runtime;
 use std.types.bool.true;
+use std.types.error.err;
+use std.types.option.opt;
+use std.types.result.res;
 use std.types.string.str_equals;
-use print: std.print;
-use glfw.glfw;
 
 # glClearColor(red, green, blue, alpha)
 def GlClearColorFun: fun(f32, f32, f32, f32);
@@ -32,14 +35,15 @@ fun on_key(handle: ptr, key: i32, scancode: i32, action: i32, mods: i32) {
 fun main(argc: i64, argv: **u8) i64 {
     glfw.set_error_callback(on_error);
 
-    if (!glfw.init()) {
+    val started: err[glfw.Error] = glfw.init();
+    if (sel started.err) {
         print.eprintln("failed to initialize GLFW");
         ret 1;
     }
 
     var major: i32 = 0;
     var minor: i32 = 0;
-    var rev: i32 = 0;
+    var rev:   i32 = 0;
     glfw.get_version(?major, ?minor, ?rev);
     print.printf("GLFW {}.{}.{}\n", major::i64, minor::i64, rev::i64);
 
@@ -49,27 +53,35 @@ fun main(argc: i64, argv: **u8) i64 {
         ret 0;
     }
 
-    val w: glfw.Window = glfw.open_window(800, 600, "mach-glfw");
-    if (!glfw.window_is_valid(w)) {
+    val opened: res[glfw.Window, glfw.Error] = glfw.open_window(800, 600, "mach-glfw");
+    if (sel opened.err) {
         print.eprintln("failed to create window");
         glfw.terminate();
         ret 1;
     }
+    val w: glfw.Window = opened.ok;
 
-    glfw.make_context_current(w);
+    glfw.make_context_current(opt[glfw.Window].some{w});
     glfw.swap_interval(1);
     glfw.set_key_callback(w, on_key);
 
-    val clear_color: GlClearColorFun = glfw.get_proc_address("glClearColor"):~GlClearColorFun;
-    val clear: GlClearFun = glfw.get_proc_address("glClear"):~GlClearFun;
-    if (clear_color == nil || clear == nil) {
-        print.eprintln("failed to load GL functions");
+    val clear_color_address: opt[ptr] = glfw.get_proc_address("glClearColor");
+    if (!sel clear_color_address.some) {
+        print.eprintln("failed to load glClearColor");
         glfw.terminate();
         ret 1;
     }
+    val clear_address: opt[ptr] = glfw.get_proc_address("glClear");
+    if (!sel clear_address.some) {
+        print.eprintln("failed to load glClear");
+        glfw.terminate();
+        ret 1;
+    }
+    val clear_color: GlClearColorFun = clear_color_address.some:~GlClearColorFun;
+    val clear:       GlClearFun      = clear_address.some:~GlClearFun;
 
     for (!glfw.window_should_close(w)) {
-        val t: f64 = glfw.get_time();
+        val t:     f64 = glfw.get_time();
         val phase: f64 = (t * 0.25) % 1.0;
         clear_color(phase::f32, 0.3, 1.0 - phase::f32, 1.0);
         clear(GL_COLOR_BUFFER_BIT);

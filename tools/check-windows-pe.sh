@@ -16,6 +16,7 @@ api-ms-win-crt-private-l1-1-0.dll
 api-ms-win-crt-stdio-l1-1-0.dll
 api-ms-win-crt-string-l1-1-0.dll
 api-ms-win-crt-utility-l1-1-0.dll
+bcrypt.dll
 gdi32.dll
 kernel32.dll
 shell32.dll
@@ -52,5 +53,5 @@ for exe in "$@"; do
         echo "check-windows-pe: unexpected base relocation type in $exe" >&2
         exit 1
     fi
-    echo "PASS $exe: 14 DLLs, $dir64 DIR64 relocations"
+    echo "PASS $exe: $(wc -l <"$tmp/expected-dlls" | tr -d " ") DLLs, $dir64 DIR64 relocations"
 done

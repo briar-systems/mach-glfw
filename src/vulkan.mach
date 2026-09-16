@@ -10,14 +10,24 @@
 # platform regardless of pointer width. Typing it here would force a dependency
 # on a Vulkan binding, and this library has none.
 
-use std.types.bool.bool;
-use std.types.string.str;
-use std.types.size.usize;
 use glfw.c;
+use glfw.error;
+use glfw.error.Error;
 use glfw.window.Window;
+use std.types.bool.bool;
+use std.types.option.opt;
+use std.types.result.res;
+use std.types.string.str;
 
-# VkResult VK_SUCCESS, the value glfwCreateWindowSurface returns on success.
-pub val SUCCESS: i32 = 0;
+# Why a Vulkan surface could not be created.
+# ---
+# glfw:   glfw refused before the platform produced a Vulkan result, for example
+#         api_unavailable when the loader or surface extensions are missing
+# vulkan: the nonzero VkResult glfw returned from the platform surface call
+pub tag SurfaceError: u8 {
+    glfw:   Error;
+    vulkan: i32;
+}
 
 # Whether a Vulkan loader and at least one ICD are available.
 #
@@ -33,21 +43,33 @@ pub fun vulkan_supported() bool {
 # not be freed. Passing these to VkInstanceCreateInfo is mandatory: an instance
 # created without them cannot present.
 # ---
-# count: receives the number of extension names
-# ret:   array of null-terminated names, or nil if Vulkan is unavailable
+# count: receives the number of extension names, zero if Vulkan is unavailable
+# ret:   array of null-terminated names, count entries long
 pub fun required_instance_extensions(count: *u32) **u8 {
     ret c.glfwGetRequiredInstanceExtensions(count);
 }
 
 # Create a Vulkan surface for a window.
 #
+# The window must have been created with the NO_API client hint.
 # ---
 # instance: the VkInstance to create the surface against
 # window:   the window to present to
-# surface:  receives the VkSurfaceKHR handle
-# ret:      true on VK_SUCCESS
-pub fun create_window_surface(instance: ptr, window: Window, surface: *u64) bool {
-    ret c.glfwCreateWindowSurface(instance, window.handle, nil, surface) == SUCCESS;
+# ret:      the VkSurfaceKHR handle, or why it could not be created
+pub fun create_window_surface(instance: ptr, window: Window) res[u64, SurfaceError] {
+    var surface: u64 = 0;
+    c.glfwGetError(nil);
+    val result: i32 = c.glfwCreateWindowSurface(instance, window.handle, nil, ?surface);
+    if (result == 0) { ret res[u64, SurfaceError].ok{surface}; }
+    val recorded: opt[Error] = error.take_error();
+    # the platform reports its failed surface call as platform_error, and the
+    # VkResult says more than that
+    if (sel recorded.some) {
+        if (!sel recorded.some.platform_error) {
+            ret res[u64, SurfaceError].err{SurfaceError.glfw{recorded.some}};
+        }
+    }
+    ret res[u64, SurfaceError].err{SurfaceError.vulkan{result}};
 }
 
 # Address of a Vulkan core or instance-level function.
@@ -57,7 +79,9 @@ pub fun create_window_surface(instance: ptr, window: Window, surface: *u64) bool
 # ---
 # instance: the instance to resolve against, or nil
 # procname: function name
-# ret:      function address, or nil
-pub fun get_instance_proc_address(instance: ptr, procname: str) ptr {
-    ret c.glfwGetInstanceProcAddress(instance, procname);
+# ret:      function address, or none if Vulkan does not provide it
+pub fun get_instance_proc_address(instance: ptr, procname: str) opt[ptr] {
+    val address: ptr = c.glfwGetInstanceProcAddress(instance, procname);
+    if (address == nil) { ret opt[ptr].none{}; }
+    ret opt[ptr].some{address};
 }

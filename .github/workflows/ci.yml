@@ -1,238 +1,64 @@
 name: CI
 
+# the family's tiered pipeline (briar-systems/.github mach-lib.yml). a pull
+# request into dev runs the linux leg, a pull request into main runs every leg
+# and the system-glfw job. the per-leg checks live in .github/ci. nothing runs
+# on push.
+
 on:
   pull_request:
-    branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      heavy:
+        description: heavy work to run on this ref
+        type: choice
+        default: none
+        options: [none, all, windows-cross, x86_64-windows, x86_64-darwin, darwin-system]
 
 permissions:
   contents: read
 
-# every job builds with the latest published mach release, taken straight from
-# its archive. there is no ref to pin and no compiler built from source here:
-# this repo is a consumer, so the compiler it should be tested against is the
-# one its users actually get. a `MACH_REF` pin used to name the compiler under
-# test, which meant CI could sit for days validating a mach nobody ran, and its
-# failures read as defects in this repo rather than as a stale pin.
-env:
-  ZIG_VERSION: "0.16.0"
-
 jobs:
-  linux:
-    name: Linux static
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
+  # every leg links the vendored static archive. the linux leg also checks the
+  # generated surface and runs the demo under xvfb, the windows-cross leg
+  # inspects the PE imports, and the native legs run the demo.
+  lib:
+    uses: briar-systems/.github/.github/workflows/mach-lib.yml@main
+    with:
+      heavy: ${{ inputs.heavy }}
+      # each target needs its own toolchain, so the legs below cover them
+      all-targets: false
+      legs: >-
+        [{"name": "x86_64-linux", "runs-on": "ubuntu-latest", "target": "linux-x86_64",
+          "apt": ["llvm", "xauth", "xorg-dev", "xvfb", "libwayland-bin", "libwayland-dev",
+                  "libxkbcommon-dev", "wayland-protocols"]},
+         {"name": "windows-cross", "runs-on": "ubuntu-latest", "tier": "heavy",
+          "target": "windows", "test": false, "apt": ["llvm", "xz-utils"]},
+         {"name": "x86_64-windows", "runs-on": "windows-latest", "tier": "heavy",
+          "target": "windows", "test": false},
+         {"name": "x86_64-darwin", "runs-on": "macos-15-intel", "tier": "heavy",
+          "target": "darwin", "test": false, "build-args": ["--pie"]}]
 
-      - name: Install build and runtime dependencies
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y llvm xauth xorg-dev xvfb libwayland-bin libwayland-dev libxkbcommon-dev wayland-protocols
-
-      - name: Install Mach
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/mach-release" "$RUNNER_TEMP/bin"
-          gh release download -R briar-systems/mach \
-            -p 'mach-*-x86_64-linux.tar.gz' -D "$RUNNER_TEMP/mach-release" --clobber
-          tar -xzf "$RUNNER_TEMP"/mach-release/mach-*-x86_64-linux.tar.gz -C "$RUNNER_TEMP/mach-release"
-          install -m 0755 "$RUNNER_TEMP/mach-release/mach" "$RUNNER_TEMP/bin/mach"
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-          # log which release this run actually resolved, so a failure can be
-          # attributed to a mach version without digging through the download
-          "$RUNNER_TEMP/bin/mach" help | head -1
-
-      - name: Build and test vendored GLFW
-        run: |
-          set -euo pipefail
-          mach dep pull
-          tools/surface.sh check
-          mach build . --target linux-x86_64 --profile debug
-          mach build . --target linux-x86_64 --profile release
-          mach test . --target linux-x86_64 --profile debug
-          mach test . --target linux-x86_64 --profile release
-
-      - name: Verify self-contained runtime
-        run: |
-          set -euo pipefail
-          for profile in debug release; do
-            exe="out/linux-x86_64/$profile/bin/glfw"
-            archive="out/linux-x86_64/$profile/vendor/glfw/libglfw.a"
-            ldd "$exe" > "$RUNNER_TEMP/glfw-$profile.ldd"
-            if grep -qi glfw "$RUNNER_TEMP/glfw-$profile.ldd"; then
-              echo "::error::$exe retains a dynamic GLFW dependency"
-              exit 1
-            fi
-            llvm-nm --defined-only "$archive" > "$RUNNER_TEMP/glfw-$profile.nm"
-            grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
-            xvfb-run -a "$exe" --smoke | tee "$RUNNER_TEMP/glfw-$profile.log"
-            grep -q '^GLFW 3\.4\.0$' "$RUNNER_TEMP/glfw-$profile.log"
-            grep -q '^smoke ok$' "$RUNNER_TEMP/glfw-$profile.log"
-          done
-
-  windows:
-    name: Windows static cross-build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install LLVM and Zig
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y llvm xz-utils
-          curl -fsSL "https://ziglang.org/download/$ZIG_VERSION/zig-x86_64-linux-$ZIG_VERSION.tar.xz" \
-            | tar -xJ -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/zig-x86_64-linux-$ZIG_VERSION" >> "$GITHUB_PATH"
-
-      - name: Install Mach
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/mach-release" "$RUNNER_TEMP/bin"
-          gh release download -R briar-systems/mach \
-            -p 'mach-*-x86_64-linux.tar.gz' -D "$RUNNER_TEMP/mach-release" --clobber
-          tar -xzf "$RUNNER_TEMP"/mach-release/mach-*-x86_64-linux.tar.gz -C "$RUNNER_TEMP/mach-release"
-          install -m 0755 "$RUNNER_TEMP/mach-release/mach" "$RUNNER_TEMP/bin/mach"
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/bin/mach" help | head -1
-
-      - name: Build and inspect vendored GLFW
-        run: |
-          set -euo pipefail
-          mach dep pull
-          mach build . --target windows --profile debug
-          mach build . --target windows --profile release
-          tools/check-windows-pe.sh \
-            out/windows/debug/bin/glfw \
-            out/windows/release/bin/glfw
-          for profile in debug release; do
-            llvm-nm --defined-only "out/windows/$profile/vendor/glfw/libglfw.a" \
-              > "$RUNNER_TEMP/glfw-$profile.nm"
-            grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
-          done
-
-  windows-native:
-    name: Windows native runtime
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: pwsh
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Zig
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          $archive = Join-Path $env:RUNNER_TEMP 'zig.zip'
-          $root = Join-Path $env:RUNNER_TEMP 'zig'
-          curl.exe -fsSL "https://ziglang.org/download/$env:ZIG_VERSION/zig-x86_64-windows-$env:ZIG_VERSION.zip" -o $archive
-          Expand-Archive -Path $archive -DestinationPath $root -Force
-          $zig = Get-ChildItem -Path $root -Directory | Select-Object -First 1
-          Add-Content -Path $env:GITHUB_PATH -Value $zig.FullName
-
-      - name: Install Mach
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          $seed = Join-Path $env:RUNNER_TEMP 'mach-release'
-          $bin = Join-Path $env:RUNNER_TEMP 'bin'
-          New-Item -ItemType Directory -Path $seed, $bin -Force | Out-Null
-          gh release download -R briar-systems/mach -p 'mach-*-x86_64-windows.zip' -D $seed --clobber
-          $zip = Get-ChildItem -Path $seed -Filter 'mach-*-x86_64-windows.zip' | Select-Object -First 1
-          Expand-Archive -Path $zip.FullName -DestinationPath $seed -Force
-          $exe = Get-ChildItem -Path $seed -Filter 'mach.exe' -Recurse | Select-Object -First 1
-          Copy-Item $exe.FullName (Join-Path $bin 'mach.exe') -Force
-          Add-Content -Path $env:GITHUB_PATH -Value $bin
-          & (Join-Path $bin 'mach.exe') help | Select-Object -First 1
-
-      - name: Build and run vendored static GLFW
-        shell: bash
-        run: |
-          set -euo pipefail
-          mach.exe dep pull
-          mach.exe build . --target windows --profile debug
-          mach.exe build . --target windows --profile release
-          for profile in debug release; do
-            exe="out/windows/$profile/bin/glfw"
-            "$exe" --smoke | tee "$RUNNER_TEMP/glfw-native-$profile.log"
-            grep -q '^GLFW 3\.4\.0$' "$RUNNER_TEMP/glfw-native-$profile.log"
-            grep -q '^smoke ok$' "$RUNNER_TEMP/glfw-native-$profile.log"
-          done
-
-  darwin:
-    name: Darwin x86_64 static and dynamic
+  # the opt-in system-glfw link, which swaps the manifest's link entry, so it
+  # cannot share a leg with the vendored build
+  darwin-system:
+    if: github.base_ref == 'main' || inputs.heavy == 'all' || inputs.heavy == 'darwin-system'
     runs-on: macos-15-intel
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install Mach
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/mach-release" "$RUNNER_TEMP/bin"
-          gh release download -R briar-systems/mach \
-            -p 'mach-*-x86_64-darwin.tar.gz' -D "$RUNNER_TEMP/mach-release" --clobber
-          tar -xzf "$RUNNER_TEMP"/mach-release/mach-*-x86_64-darwin.tar.gz -C "$RUNNER_TEMP/mach-release"
-          install -m 0755 "$RUNNER_TEMP/mach-release/mach" "$RUNNER_TEMP/bin/mach"
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/bin/mach" help | head -1
-
-      - name: Build and run vendored static GLFW
-        run: |
-          set -euo pipefail
-          if brew list --versions glfw >/dev/null 2>&1; then
-            brew uninstall --ignore-dependencies glfw
-          fi
-          mach dep pull
-          # macOS wants PIE executables, and mach-std's darwin x86_64 entry
-          # reads argc/argv per the image's load command, so a --pie image gets
-          # them in registers from LC_MAIN (mach-std#421). keep the flag and the
-          # lock together: an older mach-std here silently loses argv, which
-          # surfaces as the smoke run walking past its own `--smoke` branch.
-          if ! mach build . --target darwin --profile debug --pie; then
-            # a two-level-namespace link failure is almost always a missing
-            # `symbols` attribution, so emit the mapping read off the SDK rather
-            # than a bare symbol list nobody can act on.
-            bash tools/darwin-symbol-map.sh out/darwin/debug/vendor/glfw/libglfw.a || true
-            exit 1
-          fi
-          mach build . --target darwin --profile release --pie
-          for profile in debug release; do
-            exe="out/darwin/$profile/bin/glfw"
-            # `otool -L` opens with the binary's own path, and this binary is
-            # named glfw, so grepping the whole output matches that header and
-            # fails no matter how static the link is. drop it and inspect only
-            # the dependency lines. `ldd` on the linux leg prints no such
-            # header, which is why the identical grep is safe there.
-            otool -L "$exe" | tail -n +2 > "$RUNNER_TEMP/glfw-static-$profile.otool"
-            if grep -qi glfw "$RUNNER_TEMP/glfw-static-$profile.otool"; then
-              echo "::error::$exe retains a dynamic GLFW dependency"
-              cat "$RUNNER_TEMP/glfw-static-$profile.otool"
-              exit 1
-            fi
-            "$exe" --smoke | tee "$RUNNER_TEMP/glfw-static-$profile.log"
-            grep -q '^GLFW 3\.4\.0$' "$RUNNER_TEMP/glfw-static-$profile.log"
-            grep -q '^smoke ok$' "$RUNNER_TEMP/glfw-static-$profile.log"
-          done
-
-      - name: Build and run system dynamic GLFW
+      - uses: briar-systems/.github/.github/actions/seed-mach@main
+      - name: build and run against the system GLFW
         run: |
           set -euo pipefail
           brew install glfw
+          mach dep pull .
           sed -i.bak 's/    "glfw-static",/    "glfw",/' mach.toml
           prefix=$(brew --prefix glfw)
           mach build . --target darwin --profile debug --pie -L "$prefix/lib"
           mach build . --target darwin --profile release --pie -L "$prefix/lib"
           for profile in debug release; do
-            exe="out/darwin/$profile/bin/glfw"
+            exe="out/darwin/$profile/bin/demo"
             otool -L "$exe" | grep -E 'libglfw(\.3)?\.dylib'
             "$exe" --smoke | tee "$RUNNER_TEMP/glfw-system-$profile.log"
             version=$(sed -n 's/^GLFW //p' "$RUNNER_TEMP/glfw-system-$profile.log")
@@ -246,3 +72,13 @@ jobs:
             fi
             grep -q '^smoke ok$' "$RUNNER_TEMP/glfw-system-$profile.log"
           done
+
+  gate:
+    if: always()
+    needs: [lib, darwin-system]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: briar-systems/.github/.github/actions/gate@main
+        with:
+          needs: ${{ toJSON(needs) }}
