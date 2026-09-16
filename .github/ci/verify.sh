@@ -8,11 +8,13 @@ smoke() {
   "${@:3}" "$exe" --smoke | tee "$log"
   grep -q '^GLFW 3\.4\.0$' "$log"
   grep -q '^smoke ok$' "$log"
+  echo "$exe: smoke ok"
 }
 
 case "$MACH_CI_LEG" in
   x86_64-linux)
     tools/surface.sh check
+    echo "surface up to date"
     for profile in $MACH_CI_PROFILES; do
       exe="out/linux-x86_64/$profile/bin/demo"
       archive="out/linux-x86_64/$profile/vendor/glfw/libglfw.a"
@@ -23,6 +25,7 @@ case "$MACH_CI_LEG" in
       fi
       llvm-nm --defined-only "$archive" > "$RUNNER_TEMP/glfw-$profile.nm"
       grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
+      echo "$exe: no dynamic glfw, archive defines glfwInit"
       smoke "$exe" "$RUNNER_TEMP/glfw-$profile.log" xvfb-run -a
     done
     ;;
@@ -34,6 +37,7 @@ case "$MACH_CI_LEG" in
       grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
     done
     tools/check-windows-pe.sh "${exes[@]}"
+    echo "${exes[*]}: PE imports and archives ok"
     ;;
   x86_64-windows)
     for profile in $MACH_CI_PROFILES; do
@@ -51,6 +55,7 @@ case "$MACH_CI_LEG" in
         cat "$RUNNER_TEMP/glfw-static-$profile.otool"
         exit 1
       fi
+      echo "$exe: no dynamic glfw"
       smoke "$exe" "$RUNNER_TEMP/glfw-static-$profile.log"
     done
     ;;

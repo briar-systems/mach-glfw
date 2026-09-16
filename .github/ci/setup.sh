@@ -12,11 +12,13 @@ install_zig() {
     linux)
       curl -fsSL "https://ziglang.org/download/$zig_version/$name.tar.xz" | tar -xJ -C "$root"
       echo "$root/$name" >> "$GITHUB_PATH"
+      echo "zig $("$root/$name/zig" version)"
       ;;
     windows)
       curl -fsSL "https://ziglang.org/download/$zig_version/$name.zip" -o "$root/zig.zip"
       pwsh -NoProfile -Command "Expand-Archive -Path '$(cygpath -w "$root/zig.zip")' -DestinationPath '$(cygpath -w "$root")' -Force"
       cygpath -w "$root/$name" >> "$GITHUB_PATH"
+      echo "zig $("$root/$name/zig.exe" version)"
       ;;
   esac
 }
@@ -28,5 +30,6 @@ case "$MACH_CI_LEG" in
     if brew list --versions glfw >/dev/null 2>&1; then
       brew uninstall --ignore-dependencies glfw
     fi
+    echo "no brewed glfw"
     ;;
 esac
