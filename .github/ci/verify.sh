@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# per-leg checks on what the standard build produced
+set -euo pipefail
+
+# the demo's --smoke run prints the linked GLFW version and a success line
+smoke() {
+  local exe=$1 log=$2
+  "${@:3}" "$exe" --smoke | tee "$log"
+  grep -q '^GLFW 3\.4\.0$' "$log"
+  grep -q '^smoke ok$' "$log"
+}
+
+case "$MACH_CI_LEG" in
+  x86_64-linux)
+    tools/surface.sh check
+    for profile in $MACH_CI_PROFILES; do
+      exe="out/linux-x86_64/$profile/bin/demo"
+      archive="out/linux-x86_64/$profile/vendor/glfw/libglfw.a"
+      ldd "$exe" > "$RUNNER_TEMP/glfw-$profile.ldd"
+      if grep -qi glfw "$RUNNER_TEMP/glfw-$profile.ldd"; then
+        echo "::error::$exe retains a dynamic GLFW dependency"
+        exit 1
+      fi
+      llvm-nm --defined-only "$archive" > "$RUNNER_TEMP/glfw-$profile.nm"
+      grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
+      smoke "$exe" "$RUNNER_TEMP/glfw-$profile.log" xvfb-run -a
+    done
+    ;;
+  windows-cross)
+    exes=()
+    for profile in $MACH_CI_PROFILES; do
+      exes+=("out/windows/$profile/bin/demo")
+      llvm-nm --defined-only "out/windows/$profile/vendor/glfw/libglfw.a" > "$RUNNER_TEMP/glfw-$profile.nm"
+      grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
+    done
+    tools/check-windows-pe.sh "${exes[@]}"
+    ;;
+  x86_64-windows)
+    for profile in $MACH_CI_PROFILES; do
+      smoke "out/windows/$profile/bin/demo" "$RUNNER_TEMP/glfw-native-$profile.log"
+    done
+    ;;
+  x86_64-darwin)
+    for profile in $MACH_CI_PROFILES; do
+      exe="out/darwin/$profile/bin/demo"
+      # otool -L opens with the binary's own path, which runs through this
+      # checkout's name, so only the dependency lines are inspected
+      otool -L "$exe" | tail -n +2 > "$RUNNER_TEMP/glfw-static-$profile.otool"
+      if grep -qi glfw "$RUNNER_TEMP/glfw-static-$profile.otool"; then
+        echo "::error::$exe retains a dynamic GLFW dependency"
+        cat "$RUNNER_TEMP/glfw-static-$profile.otool"
+        exit 1
+      fi
+      smoke "$exe" "$RUNNER_TEMP/glfw-static-$profile.log"
+    done
+    ;;
+esac
