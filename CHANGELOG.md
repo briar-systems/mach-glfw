@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-16
+
 ### Changed
 - toolchain: Builds with Mach 5.1 and std 3.2. The dependency is `[dep.std]`,
   pinned by the committed `dep/std` gitlink, and `mach.lock` is gone. Consumers
@@ -42,10 +44,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     argument GLFW 3.4 ignores.
 - build: Windows executables import `advapi32.dll`, which std 3.2 links for
   owner-only file modes. The PE check expects it.
+- ci: One `ci.yml` calls the family's tiered pipeline
+  (briar-systems/.github `mach-lib.yml`) and ends in a `gate` job. A pull
+  request into dev runs the linux leg, a pull request into main runs every
+  leg plus the darwin system-GLFW job, and nothing runs on push.
 
 ### Fixed
 - build: `build-glfw.sh` compiles into a scratch directory, so the step writes
   only its declared archive under the output tree.
+- link: The darwin `libSystem` link entry uses std's logical library name, so
+  both claim libSystem imports through one library.
+- tools: `surface.sh` emits the generated imports in the order `mach fmt`
+  produces, so the surface check agrees with the formatter.
 
 ## [0.4.0] - 2026-08-08
 
