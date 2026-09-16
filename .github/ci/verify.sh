@@ -15,6 +15,7 @@ case "$MACH_CI_LEG" in
   x86_64-linux)
     tools/surface.sh check
     echo "surface up to date"
+    tools/test-pack-symbols.sh
     for profile in $MACH_CI_PROFILES; do
       exe="out/linux-x86_64/$profile/bin/demo"
       archive="out/linux-x86_64/$profile/vendor/glfw/libglfw.a"
