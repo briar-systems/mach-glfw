@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- toolchain: Builds with Mach 5.0 and std 2.1. The dependency is `[dep.std]`,
+- toolchain: Builds with Mach 5.1 and std 3.2. The dependency is `[dep.std]`,
   pinned by the committed `dep/std` gitlink, and `mach.lock` is gone. Consumers
   declare this project as `[dep.glfw]`.
 - manifest: A default `glfw` static library artifact rooted at `glfw.mach` binds
@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     out-param.
   - `set_clipboard_string()` and `get_clipboard_string()` drop the window
     argument GLFW 3.4 ignores.
+- build: Windows executables import `advapi32.dll`, which std 3.2 links for
+  owner-only file modes. The PE check expects it.
 
 ### Fixed
 - build: `build-glfw.sh` compiles into a scratch directory, so the step writes
