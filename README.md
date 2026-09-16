@@ -6,16 +6,27 @@ everything as `glfw.*`.
 
 ```mach
 use glfw;
+use std.types.error.err;
+use std.types.option.opt;
+use std.types.result.res;
 
-fun example() {
-    glfw.init();
-    val w: glfw.Window = glfw.open_window(1280, 720, "hello");
-    glfw.make_context_current(w);
+fun example() err[glfw.Error] {
+    val started: err[glfw.Error] = glfw.init();
+    if (sel started.err) { ret started; }
+    val opened: res[glfw.Window, glfw.Error] = glfw.open_window(1280, 720, "hello");
+    if (sel opened.err) {
+        glfw.terminate();
+        ret err[glfw.Error].err{opened.err};
+    }
+    val w: glfw.Window = opened.ok;
+    glfw.make_context_current(opt[glfw.Window].some{w});
     for (!glfw.window_should_close(w)) {
         glfw.swap_buffers(w);
         glfw.poll_events();
     }
+    glfw.destroy_window(w);
     glfw.terminate();
+    ret err[glfw.Error].ok{};
 }
 ```
 
@@ -25,10 +36,12 @@ vendored and linked statically, and the link requirements cascade from
 itself:
 
 ```toml
-[dep.mach-glfw]
+[dep.glfw]
 git = "https://github.com/briar-systems/mach-glfw"
 ref = "branch/main"
 ```
+
+It builds with Mach 5.0 and std 2.1.
 
 ## Goals
 
@@ -40,8 +53,6 @@ ref = "branch/main"
 
 ## Non-goals (v1)
 
-- Vulkan surface creation (`glfwGetRequiredInstanceExtensions`,
-  `glfwCreateWindowSurface`, …) — deferred until Mach has a Vulkan story.
 - Native-handle access (`glfw3native.h`) — platform-specific, deferred.
 - An OpenGL loader. `get_proc_address` exposes `glfwGetProcAddress`; GL
   bindings belong in a separate project.
@@ -55,8 +66,8 @@ Two layers:
 src/
   c.mach          raw layer: every ext fun import, C types verbatim
   glfw.mach       library surface: generated, forwards every public symbol
-  core.mach       init/terminate, version, events, time, context, error query
-  err.mach        error code constants
+  core.mach       init/terminate, version, events, time, context
+  error.mach      the Error tag and the error query
   hint.mach       init & window hint ids and values
   window.mach     Window + lifecycle, attributes, context, window callbacks
   monitor.mach    Monitor, video modes, gamma
@@ -64,6 +75,7 @@ src/
   key.mach        key code, action, and modifier constants
   mouse.mach      mouse button and cursor shape constants
   joystick.mach   joystick, hat, and gamepad constants
+  vulkan.mach     Vulkan support query, instance extensions, surface creation
   main.mach       demo executable (not part of the library surface)
 ```
 
@@ -109,31 +121,45 @@ are the C macro minus only `GLFW_` (`GLFW_KEY_ESCAPE` → `KEY_ESCAPE`). Every
 name is globally unique, which lets `glfw.mach` flatten all of them onto one
 namespace.
 
-A small set of convenience helpers has no C counterpart and follows its own
-uniform rule per handle type: `no_window()` / `no_monitor()` / `no_cursor()`
-(nil-handle values for optional arguments), `window_from_handle()` /
-`monitor_from_handle()` (rewrap raw callback pointers), `window_is_valid()` /
-`monitor_is_valid()` / `cursor_is_valid()`, and `open_window()` (windowed
-`create_window` sugar).
+A small set of convenience helpers has no C counterpart:
+`window_from_handle()` / `monitor_from_handle()` (rewrap raw callback
+pointers), `open_window()` (windowed `create_window` sugar), and the
+`glfw.error` query functions.
 
 Types:
 
 - Opaque handles wrap in single-field records: `pub rec Window { handle: ptr; }`,
-  `Monitor`, `Cursor`. Passed **by value** (one pointer wide). A nil-handle
-  record is the sentinel for failure; check with `window_is_valid(w)`.
+  `Monitor`, `Cursor`. Passed **by value** (one pointer wide). A handle record
+  always holds a live handle. An optional one is `opt[Window]`, `opt[Monitor]`
+  or `opt[Cursor]`, as an argument (`create_window`'s monitor and share,
+  `set_window_monitor`, `make_context_current`, `set_cursor`) and as a result
+  (`get_primary_monitor`, `get_window_monitor`, `get_current_context`).
 - `bool` (`std.types.bool`) replaces `GLFW_TRUE`/`GLFW_FALSE` returns and
   parameters; `str` (`std.types.string`) replaces `const char*`. Strings
   returned by GLFW are GLFW-owned; the docs state their lifetime.
 - Scalar out-params stay out-params (`get_window_size(w, ?width, ?height)`),
   the Mach idiom for multiple returns.
 
-Error model — GLFW's own, not `Result`:
+Error model:
 
-- Fallible constructors return a sentinel (nil-handle record); everything else
-  follows GLFW semantics (calls with an invalid handle fire the error
-  callback / set the last error).
-- `get_error(description: **u8) i32` wraps `glfwGetError`; `NO_ERROR`,
-  `NOT_INITIALIZED`, … (module `glfw.err`) name the codes.
+- `glfw.error.Error` is a closed tag with one case per GLFW error code, plus
+  `unrecognized` (a code this binding does not name) and `unreported` (GLFW
+  refused without recording one).
+- Calls GLFW can refuse clear the thread's last error, make the call, and
+  report the recorded error on refusal: `init` and `update_gamepad_mappings`
+  return `err[Error]`, `create_window`, `open_window`, `create_cursor` and
+  `create_standard_cursor` return `res[T, Error]`. `create_window_surface`
+  returns `res[u64, SurfaceError]`, which carries either a GLFW refusal or the
+  VkResult of the platform surface call.
+- Absence is `opt`: strings GLFW may not have (`get_key_name`,
+  `get_clipboard_string`, `get_joystick_name`, ...), single GLFW-owned records
+  (`get_video_mode`, `get_gamma_ramp`, `get_gamepad_state`), and function
+  addresses (`get_proc_address`, `get_instance_proc_address`). Arrays returned
+  with a count report emptiness through the count.
+- Everything else follows GLFW semantics: misuse fires the error callback and
+  sets the last error, which `take_error()` reads and clears. The callback
+  receives the raw code, and `error_from_code` classifies it.
+- The raw `glfw.c` layer keeps GLFW's C results unchanged.
 
 Callback model:
 
@@ -163,8 +189,8 @@ Callback model:
 `glfw.mach` re-exports every public symbol of every split module (Mach has no
 import splat, so the surface is explicit `fwd` lines). It is generated by
 `tools/surface.sh gen` and CI fails if it drifts from the split modules
-(`tools/surface.sh check`). `[project].module = "glfw.mach"` means a bare
-`use glfw;` resolves to it — binding the leaf as `glfw` and giving the whole
+(`tools/surface.sh check`). It is the entry of the default `[artifact.glfw]`
+static library, so a bare `use glfw;` resolves to it — binding the leaf as `glfw` and giving the whole
 API as `glfw.init()`, `glfw.create_window(...)`, `glfw.KEY_ESCAPE`. The split
 modules (`glfw.core`, `glfw.window`, …) remain importable individually for
 smaller dependency surfaces.
@@ -217,12 +243,11 @@ Darwin retains the toolchain's normal PIC code generation.
 
 **System-GLFW fallback.** The `system` entries remain declared in `mach.toml`
 as an opt-in: swap `"glfw-static"` for `"glfw"` and `"glfw-win"` in the
-artifact's `link` list to build against an installed GLFW ≥ 3.4
+demo artifact's `link` list to build against an installed GLFW ≥ 3.4
 (`pacman -S glfw`, `apt install libglfw3-dev`, …) instead of the vendored
 source.
 
-CI builds both profiles on all three operating systems and repeats the static
-link through a separate consuming-project fixture. Linux and Darwin run
+CI builds both profiles on all three operating systems. Linux and Darwin run
 `glfwInit` through the demo's `--smoke` mode; the Darwin lane exercises both
 the vendored archive and the system dylib. Windows is cross-built from Linux
 for exact PE import/base-relocation inspection and built again on a native
@@ -240,11 +265,12 @@ cannot be redistributed to a Linux cross-runner.
 | Monitor: enumerate, primary, pos/workarea/physical/scale/name, video modes, gamma, monitor callback | yes |
 | Input: input modes, raw mouse motion, key/scancode/name, mouse buttons, cursor pos/enter, custom + standard cursors, clipboard, time/timer, key/char/mouse/scroll/drop callbacks | yes |
 | Joystick/gamepad: presence, axes/buttons/hats, GUID, gamepad mappings/state, joystick callback | yes |
-| Vulkan, native handles | no (deferred) |
+| Vulkan: support query, required instance extensions, surface creation, instance proc address | yes |
+| Native handles | no (deferred) |
 
 ## Demo
 
-`main.mach` (executable target): error callback installed, window + OpenGL
+`main.mach` (the `demo` executable artifact): error callback installed, window + OpenGL
 context, `glClearColor`/`glClear` loaded through `get_proc_address`, animated
 clear color, ESC closes via key callback. Serves as living documentation of
 the callback, context, and event-loop idioms.

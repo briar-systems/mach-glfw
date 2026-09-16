@@ -7,7 +7,6 @@ set -eu
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 cat >"$tmp/expected-dlls" <<'EOF'
-advapi32.dll
 api-ms-win-core-synch-l1-2-0.dll
 api-ms-win-crt-convert-l1-1-0.dll
 api-ms-win-crt-heap-l1-1-0.dll
@@ -16,6 +15,7 @@ api-ms-win-crt-private-l1-1-0.dll
 api-ms-win-crt-stdio-l1-1-0.dll
 api-ms-win-crt-string-l1-1-0.dll
 api-ms-win-crt-utility-l1-1-0.dll
+bcrypt.dll
 gdi32.dll
 kernel32.dll
 shell32.dll

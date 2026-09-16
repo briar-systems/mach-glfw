@@ -1,0 +1,101 @@
+# the glfw error domain
+#
+# every wrapper that glfw can refuse reports one of these cases. glfw keeps the
+# last error per thread, and a wrapper clears it before the call it guards, so
+# the case a refusal carries belongs to that call. the human-readable
+# description is delivered only to the error callback (see core.set_error_callback).
+
+use glfw.c;
+use std.types.option.opt;
+
+# why glfw refused a call
+# ---
+# not_initialized:       the library is not initialized
+# no_current_context:    the call needs a current context on this thread
+# invalid_enum:          an argument is not a recognized enum value
+# invalid_value:         an argument value is out of range
+# out_of_memory:         a memory allocation failed
+# api_unavailable:       the requested client api is not provided by the system
+# version_unavailable:   the requested context version is not available
+# platform_error:        the platform reported a failure glfw could not classify
+# format_unavailable:    the requested pixel or clipboard format is not available
+# no_window_context:     the window has no context
+# cursor_unavailable:    the requested standard cursor shape is not available
+# feature_unavailable:   the platform does not provide the requested feature
+# feature_unimplemented: glfw does not implement the requested feature here
+# platform_unavailable:  no requested or supported platform backend is available
+# unrecognized:          a raw glfw error code this binding does not name
+# unreported:            glfw refused the call without recording an error
+pub tag Error: u8 {
+    not_initialized;
+    no_current_context;
+    invalid_enum;
+    invalid_value;
+    out_of_memory;
+    api_unavailable;
+    version_unavailable;
+    platform_error;
+    format_unavailable;
+    no_window_context;
+    cursor_unavailable;
+    feature_unavailable;
+    feature_unimplemented;
+    platform_unavailable;
+    unrecognized: i32;
+    unreported;
+}
+
+# classify a raw glfw error code, such as the one an error callback receives
+# ---
+# code: raw glfw error code
+# ret:  the error, or none for GLFW_NO_ERROR
+pub fun error_from_code(code: i32) opt[Error] {
+    if (code == 0)          { ret opt[Error].none{}; }
+    if (code == 0x00010001) { ret opt[Error].some{Error.not_initialized{}}; }
+    if (code == 0x00010002) { ret opt[Error].some{Error.no_current_context{}}; }
+    if (code == 0x00010003) { ret opt[Error].some{Error.invalid_enum{}}; }
+    if (code == 0x00010004) { ret opt[Error].some{Error.invalid_value{}}; }
+    if (code == 0x00010005) { ret opt[Error].some{Error.out_of_memory{}}; }
+    if (code == 0x00010006) { ret opt[Error].some{Error.api_unavailable{}}; }
+    if (code == 0x00010007) { ret opt[Error].some{Error.version_unavailable{}}; }
+    if (code == 0x00010008) { ret opt[Error].some{Error.platform_error{}}; }
+    if (code == 0x00010009) { ret opt[Error].some{Error.format_unavailable{}}; }
+    if (code == 0x0001000A) { ret opt[Error].some{Error.no_window_context{}}; }
+    if (code == 0x0001000B) { ret opt[Error].some{Error.cursor_unavailable{}}; }
+    if (code == 0x0001000C) { ret opt[Error].some{Error.feature_unavailable{}}; }
+    if (code == 0x0001000D) { ret opt[Error].some{Error.feature_unimplemented{}}; }
+    if (code == 0x0001000E) { ret opt[Error].some{Error.platform_unavailable{}}; }
+    ret opt[Error].some{Error.unrecognized{code}};
+}
+
+# take the last error glfw recorded on this thread, clearing it
+# ---
+# ret: the error, or none if nothing was recorded since the last take
+pub fun take_error() opt[Error] {
+    ret error_from_code(c.glfwGetError(nil));
+}
+
+# take the error behind a call that glfw just refused
+# ---
+# ret: the recorded error, or unreported if glfw recorded none
+pub fun take_refusal() Error {
+    val taken: opt[Error] = take_error();
+    if (sel taken.some) { ret taken.some; }
+    ret Error.unreported{};
+}
+
+test "error: codes classify to their cases" {
+    val none: opt[Error] = error_from_code(0);
+    if (!sel none.none) { ret 1; }
+    val first: opt[Error] = error_from_code(0x00010001);
+    if (!sel first.some) { ret 2; }
+    if (!sel first.some.not_initialized) { ret 3; }
+    val last: opt[Error] = error_from_code(0x0001000E);
+    if (!sel last.some) { ret 4; }
+    if (!sel last.some.platform_unavailable) { ret 5; }
+    val novel: opt[Error] = error_from_code(0x0001000F);
+    if (!sel novel.some) { ret 6; }
+    if (!sel novel.some.unrecognized) { ret 7; }
+    if (novel.some.unrecognized != 0x0001000F) { ret 8; }
+    ret 0;
+}

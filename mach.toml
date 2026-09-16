@@ -5,6 +5,7 @@ src = "src"
 out = "out/{target.name}/{profile.name}"
 
 [target.linux-x86_64]
+default = true
 isa = "x86_64"
 os  = "linux"
 abi = "sysv64"
@@ -20,19 +21,34 @@ os  = "darwin"
 abi = "sysv64"
 
 [profile.debug]
+default = true
 opt = 0
 debug = true
 simd = "scalarize"
+vectorize = false
+float_reassoc = false
 
 [profile.release]
 opt = 2
 debug = false
 simd = "scalarize"
+vectorize = false
+float_reassoc = false
 
 [artifact.glfw]
+kind = "static"
+entry = "glfw.mach"
+out = "lib/glfw{artifact.suffix}"
+targets = ["*"]
+link = []
+need = []
+default = true
+
+# demo and smoke-test executable, not part of the library surface
+[artifact.demo]
 kind = "bin"
 entry = "main.mach"
-out = "bin/glfw"
+out = "bin/demo"
 targets = ["*"]
 link = [
     "glfw-static",
@@ -275,10 +291,11 @@ isa = "*"
 abi = "*"
 export = true
 
+# the logical name matches std's, so a symbol both claim names one provider
 [link.libSystem]
 source = "system"
 name = "/usr/lib/libSystem.B.dylib"
-library = "/usr/lib/libSystem.B.dylib"
+library = "libSystem"
 symbols = [
     "__assert_rtn", "__bzero", "__memcpy_chk", "__sprintf_chk",
     "__stack_chk_fail", "__stack_chk_guard", "_NSConcreteGlobalBlock",
@@ -462,7 +479,7 @@ abi = "*"
 export = true
 
 [step.build-glfw]
-cmd = "bash tools/build-glfw.sh {project.out}/vendor/glfw"
+argv = ["bash", "tools/build-glfw.sh", "{project.out}/vendor/glfw"]
 in = [
     "tools/build-glfw.sh",
     "vendor/glfw/include/GLFW/*",
@@ -473,7 +490,7 @@ out = ["{project.out}/vendor/glfw/libglfw.a"]
 need = []
 
 [step.mingw-runtime]
-cmd = "bash tools/materialize-mingw-runtime.sh {project.out}/vendor/mingw/libmingw32.lib {project.out}/vendor/mingw/compiler_rt.lib"
+argv = ["bash", "tools/materialize-mingw-runtime.sh", "{project.out}/vendor/mingw/libmingw32.lib", "{project.out}/vendor/mingw/compiler_rt.lib"]
 in = ["tools/materialize-mingw-runtime.sh"]
 out = [
     "{project.out}/vendor/mingw/libmingw32.lib",
@@ -481,6 +498,6 @@ out = [
 ]
 need = []
 
-[dep.mach-std]
+[dep.std]
 git = "https://github.com/briar-systems/mach-std"
-ref = "branch/main"
+ref = "tag/v2.1.0"

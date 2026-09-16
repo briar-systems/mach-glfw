@@ -5,7 +5,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-MODULES="core window monitor input key hint err mouse joystick vulkan"
+MODULES="core window monitor input key hint error mouse joystick vulkan"
 
 generate() {
     cat <<'EOF'
@@ -24,7 +24,7 @@ EOF
     for m in $MODULES; do printf 'use glfw.%s;\n' "$m"; done
     printf '\nfwd c.Vidmode;\nfwd c.Gammaramp;\nfwd c.Image;\nfwd c.Gamepadstate;\n'
     for m in $MODULES; do
-        grep -oE '^pub (val|fun|rec|def) [A-Za-z_][A-Za-z0-9_]*' "src/$m.mach" |
+        grep -oE '^pub (val|fun|rec|def|tag) [A-Za-z_][A-Za-z0-9_]*' "src/$m.mach" |
             awk -v m="$m" '{print m"."$3}'
     done | LC_ALL=C sort | awk '{print "fwd "$1";"}'
 }

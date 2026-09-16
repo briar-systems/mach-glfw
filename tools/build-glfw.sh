@@ -76,6 +76,10 @@ else
 fi
 
 mkdir -p "$OUT"
+# objects and generated headers stay out of $OUT, where mach refuses any file
+# the step does not declare
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
 
 if [ "$OS" = linux ]; then
     # the x11/wayland/xkbcommon headers come from the system; -idirafter keeps
@@ -88,7 +92,7 @@ if [ "$OS" = linux ]; then
 
     # wayland-scanner turns the vendored protocol xml into the headers wl_init.c
     # includes directly; the -code.h halves are not separate units
-    WL=$OUT/wl
+    WL=$WORK/wl
     mkdir -p "$WL"
     for p in wayland viewporter xdg-shell fractional-scale-v1 \
              xdg-activation-v1 xdg-decoration-unstable-v1 \
@@ -101,15 +105,14 @@ if [ "$OS" = linux ]; then
 
     # memfd_create is the preferred shm path; mkstemp is the fallback
     if printf '#include <sys/mman.h>\nint main(void){return memfd_create("x",0);}\n' |
-       $CC $TFLAG -D_GNU_SOURCE -x c - -o "$OUT/.memfd" >/dev/null 2>&1; then
+       $CC $TFLAG -D_GNU_SOURCE -x c - -o "$WORK/.memfd" >/dev/null 2>&1; then
         DEFS="$DEFS -DHAVE_MEMFD_CREATE"
     fi
-    rm -f "$OUT/.memfd"
 fi
 
 OBJS=""
 for u in $UNITS; do
-    o=$OUT/${u%.*}.o
+    o=$WORK/${u%.*}.o
     $CC $TFLAG -c $FLAGS $DEFS $INC "$SRC/$u" -o "$o"
     OBJS="$OBJS $o"
 done

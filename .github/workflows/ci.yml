@@ -47,7 +47,7 @@ jobs:
       - name: Build and test vendored GLFW
         run: |
           set -euo pipefail
-          mach dep pull
+          mach dep pull .
           tools/surface.sh check
           mach build . --target linux-x86_64 --profile debug
           mach build . --target linux-x86_64 --profile release
@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           for profile in debug release; do
-            exe="out/linux-x86_64/$profile/bin/glfw"
+            exe="out/linux-x86_64/$profile/bin/demo"
             archive="out/linux-x86_64/$profile/vendor/glfw/libglfw.a"
             ldd "$exe" > "$RUNNER_TEMP/glfw-$profile.ldd"
             if grep -qi glfw "$RUNNER_TEMP/glfw-$profile.ldd"; then
@@ -103,12 +103,12 @@ jobs:
       - name: Build and inspect vendored GLFW
         run: |
           set -euo pipefail
-          mach dep pull
+          mach dep pull .
           mach build . --target windows --profile debug
           mach build . --target windows --profile release
           tools/check-windows-pe.sh \
-            out/windows/debug/bin/glfw \
-            out/windows/release/bin/glfw
+            out/windows/debug/bin/demo \
+            out/windows/release/bin/demo
           for profile in debug release; do
             llvm-nm --defined-only "out/windows/$profile/vendor/glfw/libglfw.a" \
               > "$RUNNER_TEMP/glfw-$profile.nm"
@@ -156,11 +156,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mach.exe dep pull
+          mach.exe dep pull .
           mach.exe build . --target windows --profile debug
           mach.exe build . --target windows --profile release
           for profile in debug release; do
-            exe="out/windows/$profile/bin/glfw"
+            exe="out/windows/$profile/bin/demo"
             "$exe" --smoke | tee "$RUNNER_TEMP/glfw-native-$profile.log"
             grep -q '^GLFW 3\.4\.0$' "$RUNNER_TEMP/glfw-native-$profile.log"
             grep -q '^smoke ok$' "$RUNNER_TEMP/glfw-native-$profile.log"
@@ -191,11 +191,11 @@ jobs:
           if brew list --versions glfw >/dev/null 2>&1; then
             brew uninstall --ignore-dependencies glfw
           fi
-          mach dep pull
+          mach dep pull .
           # macOS wants PIE executables, and mach-std's darwin x86_64 entry
           # reads argc/argv per the image's load command, so a --pie image gets
           # them in registers from LC_MAIN (mach-std#421). keep the flag and the
-          # lock together: an older mach-std here silently loses argv, which
+          # std pin together: an older mach-std here silently loses argv, which
           # surfaces as the smoke run walking past its own `--smoke` branch.
           if ! mach build . --target darwin --profile debug --pie; then
             # a two-level-namespace link failure is almost always a missing
@@ -206,9 +206,9 @@ jobs:
           fi
           mach build . --target darwin --profile release --pie
           for profile in debug release; do
-            exe="out/darwin/$profile/bin/glfw"
-            # `otool -L` opens with the binary's own path, and this binary is
-            # named glfw, so grepping the whole output matches that header and
+            exe="out/darwin/$profile/bin/demo"
+            # `otool -L` opens with the binary's own path, and that path runs
+            # through the mach-glfw checkout, so grepping the whole output matches that header and
             # fails no matter how static the link is. drop it and inspect only
             # the dependency lines. `ldd` on the linux leg prints no such
             # header, which is why the identical grep is safe there.
@@ -232,7 +232,7 @@ jobs:
           mach build . --target darwin --profile debug --pie -L "$prefix/lib"
           mach build . --target darwin --profile release --pie -L "$prefix/lib"
           for profile in debug release; do
-            exe="out/darwin/$profile/bin/glfw"
+            exe="out/darwin/$profile/bin/demo"
             otool -L "$exe" | grep -E 'libglfw(\.3)?\.dylib'
             "$exe" --smoke | tee "$RUNNER_TEMP/glfw-system-$profile.log"
             version=$(sed -n 's/^GLFW //p' "$RUNNER_TEMP/glfw-system-$profile.log")
