@@ -431,7 +431,6 @@ fwd vulkan.create_window_surface;
 fwd vulkan.get_instance_proc_address;
 fwd vulkan.required_instance_extensions;
 fwd vulkan.vulkan_supported;
-fwd window.FramebufferSizeFun;
 fwd window.Window;
 fwd window.WindowCloseFun;
 fwd window.WindowContentScaleFun;
