@@ -3,10 +3,15 @@ name: CI
 # the family's tiered pipeline (briar-systems/.github mach-lib.yml). a pull
 # request into dev runs the linux leg, a pull request into main runs every leg
 # and the system-glfw job. the per-leg checks live in .github/ci. nothing runs
-# on push.
+# on push. release.yml calls this with heavy: all, since a tag has no base.
 
 on:
   pull_request:
+  workflow_call:
+    inputs:
+      heavy:
+        type: string
+        default: none
   workflow_dispatch:
     inputs:
       heavy:
