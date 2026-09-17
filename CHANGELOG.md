@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- manifest: `[project].mach = "^5.3"` declares the compiler range, so Mach 5.3
+  and later build the project without the missing-range warning. Mach 5.2
+  refuses the key.
 - license: The copyright holder is Briar Systems LLC. The MIT terms are
   unchanged.
 - ci: A pushed `v*` tag is released by `release.yml`, which uses the family's
