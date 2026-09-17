@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- ci: A pushed `v*` tag is released by `release.yml`, which uses the family's
+  shared release workflow (briar-systems/.github `mach-release.yml`). It
+  checks the tag against `mach.toml` and this changelog, runs the full CI tier,
+  and publishes the release with the version's changelog section as notes.
+  A dispatch rehearses the same path.
+
 ## [0.5.1] - 2026-09-16
 
 ### Changed
