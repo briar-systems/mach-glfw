@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-16
+
+### Changed
+- toolchain: Builds with Mach 5.2 and std 4.0 (`[dep.std]` at `tag/v4.0.0`).
+  std 4.0 requires Mach 5.2.0 or later. None of the names std 4.0 removed are
+  used here, and the public API is unchanged.
+- tools: `darwin-symbol-map.sh` packs each generated `symbols` array the way
+  the manifest lays it out, so the output pastes straight into `mach.toml`.
+  The packing lives in `tools/pack-symbols.sh`, and CI checks that its output
+  parses and round-trips. Based on #41 by @Angluca.
+
 ## [0.5.0] - 2026-09-16
 
 ### Changed
