@@ -41,7 +41,7 @@ git = "https://github.com/briar-systems/mach-glfw"
 ref = "branch/main"
 ```
 
-It builds with Mach 5.1 and std 3.2.
+It builds with Mach 5.2 and std 4.0.
 
 ## Goals
 
