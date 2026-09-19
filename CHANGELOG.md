@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- toolchain: Builds with std 5.7 (`[dep.std]` at `tag/v5.7.1`) and declares
+  `[project].mach = "^5.5.2"`, the floor std 5.7.1 itself requires. glfw's
+  own code needs nothing newer than 5.3, and no source changed. A consumer on
+  std 5 overrides every dependency's std, so a library still on std 4 broke
+  under it.
 - manifest: `[project].mach = "^5.3"` declares the compiler range, so Mach 5.3
   and later build the project without the missing-range warning. Mach 5.2
   refuses the key.
