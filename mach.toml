@@ -1,6 +1,6 @@
 [project]
 id = "glfw"
-version = "0.5.1"
+version = "0.6.0"
 mach = "^5.5.2"
 src = "src"
 out = "out/{target.name}/{profile.name}"
