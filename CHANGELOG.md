@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-19
+
 ### Changed
 - toolchain: Builds with std 5.7 (`[dep.std]` at `tag/v5.7.1`) and declares
   `[project].mach = "^5.5.2"`, the floor std 5.7.1 itself requires. glfw's
