@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-19
+
+### Changed
+- toolchain: Builds with std 5.7 (`[dep.std]` `version = "^5.7.1"`, pinned by
+  the `dep/std` gitlink) and declares
+  `[project].mach = "^5.5.2"`, the floor std 5.7.1 itself requires. glfw's
+  own code needs nothing newer than 5.3, and no source changed. A consumer on
+  std 5 overrides every dependency's std, so a library still on std 4 broke
+  under it. The dependency is a range rather than an exact tag so a root on a
+  later std 5.x resolves without conflict.
+- manifest: `[project].mach = "^5.3"` declares the compiler range, so Mach 5.3
+  and later build the project without the missing-range warning. Mach 5.2
+  refuses the key.
+- license: The copyright holder is Briar Systems LLC. The MIT terms are
+  unchanged.
+- ci: A pushed `v*` tag is released by `cd.yml`, which uses the family's
+  shared release workflow (briar-systems/.github `mach-release.yml`). It
+  checks the tag against `mach.toml` and this changelog, runs the full CI tier,
+  and publishes the release with the version's changelog section as notes.
+  A dispatch rehearses the same path.
+
 ## [0.5.1] - 2026-09-16
 
 ### Changed
