@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- toolchain: Builds with std 6.0 (`[dep.std]` `version = "^6.0"`, pinned at
+  v6.0.0 by the `dep/std` gitlink) and declares `[project].mach = "^5.9"`.
+  std 6.0.0's breaking changes (natural ordering for sort, heap, map and set,
+  `ct` width generics, `buffers.Budgets` by value) touch no glfw call site,
+  so no source changed and glfw's own surface is unchanged.
+
 ## [0.6.0] - 2026-09-19
 
 ### Changed
