@@ -57,25 +57,6 @@ link = [
 need = []
 default = true
 
-# demo and smoke-test executable, not part of the library surface
-[artifact.demo]
-kind = "bin"
-entry = "main.mach"
-out = "bin/demo"
-targets = ["*"]
-link = [
-    "glfw-static",
-    "mingw32", "compiler-rt",
-    "pthread", "m", "dl", "rt",
-    "gdi32", "user32", "shell32", "kernel32",
-    "ucrt-heap", "ucrt-string", "ucrt-convert", "ucrt-utility",
-    "ucrt-math", "ucrt-private", "ucrt-stdio",
-    "libSystem", "objc",
-    "Cocoa", "AppKit", "Foundation", "CoreGraphics", "CoreServices",
-    "IOKit", "CoreFoundation", "CoreVideo", "OpenGL",
-]
-need = []
-
 [link.glfw-static]
 source = "local"
 path = "{project.out}/vendor/glfw/libglfw.a"
@@ -84,8 +65,9 @@ isa = "*"
 abi = "*"
 export = true
 
-# opt-in fallback: swap "glfw-static" for "glfw"/"glfw-win" in the artifact's
-# link list to build against a system-installed GLFW instead of the vendored one
+# opt-in fallback: tools/system-glfw.sh swaps "glfw-static" for "glfw"/"glfw-win"
+# in the artifact's link list and moves the export onto them, so this project and
+# its consumers link a system-installed GLFW instead of the vendored one
 [link.glfw]
 source = "system"
 name = "glfw"

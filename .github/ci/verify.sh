@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
-# per-leg checks on what the standard build produced
+# per-leg checks on the demo, which the subprojects phase already built in every
+# profile, since the library declares no binary
 set -euo pipefail
 
-# mach builds only the default artifact, the library, without a selector, so the
-# demo every leg checks below is built here
-demo_args=(--bin demo --target "$MACH_CI_TARGET")
-if [ "$MACH_CI_LEG" = x86_64-darwin ]; then
-  demo_args+=(--pie)
-fi
-for profile in $MACH_CI_PROFILES; do
-  "$MACH_COMPILER" build "$MACH_CI_PROJECT" --profile "$profile" "${demo_args[@]}"
-done
+demo=demo/window
+out="$demo/out/$MACH_CI_TARGET"
 
 # the demo's --smoke run prints the linked GLFW version and a success line
 smoke() {
@@ -27,8 +21,8 @@ case "$MACH_CI_LEG" in
     echo "surface up to date"
     tools/test-pack-symbols.sh
     for profile in $MACH_CI_PROFILES; do
-      exe="out/linux-x86_64/$profile/bin/demo"
-      archive="out/linux-x86_64/$profile/vendor/glfw/libglfw.a"
+      exe="$out/$profile/bin/window"
+      archive="$out/$profile/vendor/glfw/libglfw.a"
       ldd "$exe" > "$RUNNER_TEMP/glfw-$profile.ldd"
       if grep -qi glfw "$RUNNER_TEMP/glfw-$profile.ldd"; then
         echo "::error::$exe retains a dynamic GLFW dependency"
@@ -43,8 +37,8 @@ case "$MACH_CI_LEG" in
   windows-cross)
     exes=()
     for profile in $MACH_CI_PROFILES; do
-      exes+=("out/windows/$profile/bin/demo")
-      llvm-nm --defined-only "out/windows/$profile/vendor/glfw/libglfw.a" > "$RUNNER_TEMP/glfw-$profile.nm"
+      exes+=("$out/$profile/bin/window")
+      llvm-nm --defined-only "$out/$profile/vendor/glfw/libglfw.a" > "$RUNNER_TEMP/glfw-$profile.nm"
       grep -q ' T glfwInit$' "$RUNNER_TEMP/glfw-$profile.nm"
     done
     tools/check-windows-pe.sh "${exes[@]}"
@@ -52,12 +46,12 @@ case "$MACH_CI_LEG" in
     ;;
   x86_64-windows)
     for profile in $MACH_CI_PROFILES; do
-      smoke "out/windows/$profile/bin/demo" "$RUNNER_TEMP/glfw-native-$profile.log"
+      smoke "$out/$profile/bin/window" "$RUNNER_TEMP/glfw-native-$profile.log"
     done
     ;;
   x86_64-darwin)
     for profile in $MACH_CI_PROFILES; do
-      exe="out/darwin/$profile/bin/demo"
+      exe="$out/$profile/bin/window"
       # otool -L opens with the binary's own path, which runs through this
       # checkout's name, so only the dependency lines are inspected
       otool -L "$exe" | tail -n +2 > "$RUNNER_TEMP/glfw-static-$profile.otool"

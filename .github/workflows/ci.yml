@@ -24,9 +24,10 @@ permissions:
   contents: read
 
 jobs:
-  # every leg links the vendored static archive. the linux leg also checks the
-  # generated surface and runs the demo under xvfb, the windows-cross leg
-  # inspects the PE imports, and the native legs run the demo.
+  # every leg builds the demo, its own project under demo/window, against the
+  # vendored static archive. the linux leg also checks the generated surface and
+  # runs the demo under xvfb, the windows-cross leg inspects the PE imports, and
+  # the native legs run the demo.
   lib:
     uses: briar-systems/.github/.github/workflows/mach-lib.yml@main
     with:
@@ -35,6 +36,10 @@ jobs:
       mach-version: v5.12.0
       # each target needs its own toolchain, so the legs below cover them
       all-targets: false
+      # the demo is its own project, so every profile builds it on every leg and
+      # verify.sh checks and runs it
+      subprojects: >-
+        [{"path": "demo/window", "build": true, "test": false}]
       legs: >-
         [{"name": "x86_64-linux", "runs-on": "ubuntu-latest", "target": "linux-x86_64",
           "apt": ["llvm", "xauth", "xorg-dev", "xvfb", "libwayland-bin", "libwayland-dev",
@@ -44,10 +49,11 @@ jobs:
          {"name": "x86_64-windows", "runs-on": "windows-latest", "tier": "heavy",
           "target": "windows", "test": false},
          {"name": "x86_64-darwin", "runs-on": "macos-15-intel", "tier": "heavy",
-          "target": "darwin", "test": false}]
+          "target": "darwin", "test": false, "build-args": ["--pie"]}]
 
-  # the opt-in system-glfw link, which swaps the manifest's link entry, so it
-  # cannot share a leg with the vendored build
+  # the opt-in system-glfw link, which rewrites the library manifest, so it
+  # cannot share a leg with the vendored build. the demo's path dependency is a
+  # copy, so the swap lands before the demo pulls it
   darwin-system:
     if: github.base_ref == 'main' || inputs.heavy == 'all' || inputs.heavy == 'darwin-system'
     runs-on: macos-15-intel
@@ -61,13 +67,13 @@ jobs:
         run: |
           set -euo pipefail
           brew install glfw
-          mach dep pull .
-          sed -i.bak 's/    "glfw-static",/    "glfw",/' mach.toml
+          tools/system-glfw.sh
+          mach dep pull demo/window
           prefix=$(brew --prefix glfw)
-          mach build . --bin demo --target darwin --profile debug --pie -L "$prefix/lib"
-          mach build . --bin demo --target darwin --profile release --pie -L "$prefix/lib"
+          mach build demo/window --target darwin --profile debug --pie -L "$prefix/lib"
+          mach build demo/window --target darwin --profile release --pie -L "$prefix/lib"
           for profile in debug release; do
-            exe="out/darwin/$profile/bin/demo"
+            exe="demo/window/out/darwin/$profile/bin/window"
             otool -L "$exe" | grep -E 'libglfw(\.3)?\.dylib'
             "$exe" --smoke | tee "$RUNNER_TEMP/glfw-system-$profile.log"
             version=$(sed -n 's/^GLFW //p' "$RUNNER_TEMP/glfw-system-$profile.log")

@@ -4,7 +4,7 @@
 # through the context's proc loader, and animates the clear color until
 # the window is closed or ESC is pressed.
 
-use glfw.lib.glfw;
+use glfw;
 use std.print;
 use std.runtime;
 use std.types.bool.true;
