@@ -19,6 +19,8 @@ use glfw.monitor;
 use glfw.mouse;
 use glfw.vulkan;
 use glfw.window;
+# links the startup entrypoint so `mach test .` over this library produces a binary
+use std.runtime;
 
 fwd c.Vidmode;
 fwd c.Gammaramp;
