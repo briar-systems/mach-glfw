@@ -33,15 +33,22 @@ fun example() err[glfw.Error] {
 Consuming projects vendor the bindings as a normal Mach dependency. GLFW is
 vendored and linked statically, and the link requirements cascade from
 `mach-glfw`'s own manifest, so consumers declare nothing beyond the dependency
-itself:
+itself. Add it with `mach dep add`, which declares the dependency at a caret
+range over the newest compatible release and realizes it:
+
+```sh
+mach dep add . glfw --git https://github.com/briar-systems/mach-glfw
+```
+
+That writes this stanza to `mach.toml`:
 
 ```toml
 [dep.glfw]
 git = "https://github.com/briar-systems/mach-glfw"
-ref = "branch/main"
+version = "^0.8.0"
 ```
 
-It builds with Mach 5.5 and std 5.7.
+Requires Mach 5.12 or newer and std 8.1.
 
 ## Goals
 
