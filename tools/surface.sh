@@ -22,6 +22,7 @@ generate() {
 EOF
     # mach fmt orders imports, so the generated block is emitted in that order
     for m in c $MODULES; do printf 'use glfw.%s;\n' "$m"; done | LC_ALL=C sort
+    printf '# links the startup entrypoint so `mach test .` over this library produces a binary\nuse std.runtime;\n'
     printf '\nfwd c.Vidmode;\nfwd c.Gammaramp;\nfwd c.Image;\nfwd c.Gamepadstate;\n'
     for m in $MODULES; do
         grep -oE '^pub (val|fun|rec|def|tag) [A-Za-z_][A-Za-z0-9_]*' "src/$m.mach" |

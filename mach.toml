@@ -41,7 +41,19 @@ kind = "static"
 entry = "glfw.mach"
 out = "lib/glfw{artifact.suffix}"
 targets = ["*"]
-link = []
+# mach tests an artifact's closure with that artifact's links, so the library
+# names everything the vendored archive needs for `mach test .` to link
+link = [
+    "glfw-static",
+    "mingw32", "compiler-rt",
+    "pthread", "m", "dl", "rt",
+    "gdi32", "user32", "shell32", "kernel32",
+    "ucrt-heap", "ucrt-string", "ucrt-convert", "ucrt-utility",
+    "ucrt-math", "ucrt-private", "ucrt-stdio",
+    "libSystem", "objc",
+    "Cocoa", "AppKit", "Foundation", "CoreGraphics", "CoreServices",
+    "IOKit", "CoreFoundation", "CoreVideo", "OpenGL",
+]
 need = []
 default = true
 
