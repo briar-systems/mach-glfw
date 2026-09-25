@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- readme: The dependency stanza selects releases with `version = "^0.8.0"`, as
+  `mach dep add` writes it, in place of following `branch/main`, and shows the
+  `mach dep add` command first. The requirement line names Mach 5.12 and std
+  8.1 in place of the stale Mach 5.5 and std 5.7 (#83).
+
 ## [0.8.0] - 2026-09-25
 
 ### Changed
