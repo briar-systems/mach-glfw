@@ -1,7 +1,7 @@
 #!/bin/sh
-# regenerate or verify src/glfw.mach, the flat public surface.
-#   tools/surface.sh gen     rewrite src/glfw.mach from the split modules
-#   tools/surface.sh check   exit nonzero if src/glfw.mach is out of date
+# regenerate or verify src/lib/glfw.mach, the flat public surface.
+#   tools/surface.sh gen     rewrite src/lib/glfw.mach from the split modules
+#   tools/surface.sh check   exit nonzero if src/lib/glfw.mach is out of date
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -15,7 +15,7 @@ generate() {
 # `tools/surface.sh gen` after changing any split module's public surface.
 #
 # re-exports every binding under one namespace so consumers can write
-# `use glfw.glfw;` and reach the whole API as glfw.init(),
+# `use glfw;` and reach the whole API as glfw.init(),
 # glfw.create_window(), glfw.KEY_ESCAPE, and so on. the split modules
 # (glfw.core, glfw.window, ...) remain importable individually.
 
@@ -31,9 +31,9 @@ EOF
 }
 
 case "${1:-}" in
-    gen)   generate > src/glfw.mach ;;
-    check) generate | diff -u src/glfw.mach - >&2 || {
-               echo "src/glfw.mach is out of date; run tools/surface.sh gen" >&2
+    gen)   generate > src/lib/glfw.mach ;;
+    check) generate | diff -u src/lib/glfw.mach - >&2 || {
+               echo "src/lib/glfw.mach is out of date; run tools/surface.sh gen" >&2
                exit 1
            } ;;
     *)     echo "usage: tools/surface.sh gen|check" >&2; exit 2 ;;

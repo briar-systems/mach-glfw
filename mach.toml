@@ -38,7 +38,7 @@ float_reassoc = false
 
 [artifact.glfw]
 kind = "static"
-entry = "glfw.mach"
+entry = "lib/glfw.mach"
 out = "lib/glfw{artifact.suffix}"
 targets = ["*"]
 # mach tests an artifact's closure with that artifact's links, so the library
