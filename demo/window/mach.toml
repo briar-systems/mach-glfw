@@ -1,0 +1,55 @@
+[project]
+id = "window"
+version = "0.1.0"
+mach = "^5.12"
+src = "src"
+out = "out/{target.name}/{profile.name}"
+
+[target.linux-x86_64]
+default = true
+isa = "x86_64"
+os  = "linux"
+abi = "sysv64"
+
+[target.windows]
+isa = "x86_64"
+os  = "windows"
+abi = "win64"
+
+[target.darwin]
+isa = "x86_64"
+os  = "darwin"
+abi = "sysv64"
+
+[profile.debug]
+default = true
+opt = 0
+debug = true
+simd = "scalarize"
+vectorize = false
+float_reassoc = false
+
+[profile.release]
+opt = 2
+debug = false
+simd = "scalarize"
+vectorize = false
+float_reassoc = false
+
+# the demo and smoke-test executable. the vendored archive and everything it
+# needs arrive as the library's exported links, so the demo names none itself
+[artifact.window]
+kind = "bin"
+entry = "bin/main.mach"
+out = "bin/window"
+targets = ["*"]
+link = []
+need = []
+
+[dep.std]
+git = "https://github.com/briar-systems/mach-std"
+ref = "tag/v8.1.0"
+
+# the bindings from this checkout, so the demo always drives the tree it ships with
+[dep.glfw]
+path = "../.."
