@@ -8,10 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- toolchain: Builds with std 8.0 (`[dep.std]` `version = "^8.0"`, pinned at
-  v8.0.0 by the `dep/std` gitlink) and declares `[project].mach = "^5.12"`,
-  which std 8.0.0 requires. Resolution is flat, so a consumer of glfw must
-  move to mach-std 8 and mach 5.12 with it. std 7.0.0's and 8.0.0's breaking
+- toolchain: Builds with std 8.1 (`[dep.std]` `version = "^8.1"`, pinned at
+  v8.1.0 by the `dep/std` gitlink) and declares `[project].mach = "^5.12"`,
+  which std 8 requires. 8.1.0 is the floor because 8.0.0 overwrote the C
+  runtime's thread pointer on linux, so `glfwInit` segfaulted in `dlopen`
+  (briar-systems/mach-std#915). Resolution is flat, so a consumer of glfw must
+  move to mach-std 8.1 and mach 5.12 with it. std 7.0.0's and 8.0.0's breaking
   changes (`io.runtime.make` taking an allocator, `data.toml.Value` and
   `buffers.SecretSource` growing, the page, testing and arena allocators
   honouring `align`) touch no glfw call site, so no binding changed (#84).

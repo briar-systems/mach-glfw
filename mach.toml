@@ -513,4 +513,4 @@ need = []
 
 [dep.std]
 git = "https://github.com/briar-systems/mach-std"
-version = "^8.0"
+version = "^8.1"
