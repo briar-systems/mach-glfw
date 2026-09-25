@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-25
+
 ### Changed
 - toolchain: Builds with std 8.1 (`[dep.std]` `version = "^8.1"`, pinned at
   v8.1.0 by the `dep/std` gitlink) and declares `[project].mach = "^5.12"`,
