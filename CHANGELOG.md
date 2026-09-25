@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- toolchain: Builds with std 8.0 (`[dep.std]` `version = "^8.0"`, pinned at
+  v8.0.0 by the `dep/std` gitlink) and declares `[project].mach = "^5.12"`,
+  which std 8.0.0 requires. Resolution is flat, so a consumer of glfw must
+  move to mach-std 8 and mach 5.12 with it. std 7.0.0's and 8.0.0's breaking
+  changes (`io.runtime.make` taking an allocator, `data.toml.Value` and
+  `buffers.SecretSource` growing, the page, testing and arena allocators
+  honouring `align`) touch no glfw call site, so no binding changed (#84).
+- manifest: mach 5.12 tests only the selected artifact's closure, with that
+  artifact's links (briar-systems/mach#3813). `glfw.mach` now uses
+  `std.runtime`, and `[artifact.glfw]` names the same link list as the demo,
+  so `mach test .` links and still runs all three tests. `mach build .` builds
+  only the library, the default artifact, so CI builds the demo with
+  `--bin demo` (#84).
+
 ## [0.7.0] - 2026-09-19
 
 ### Changed
