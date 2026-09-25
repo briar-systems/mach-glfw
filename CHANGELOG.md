@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-25
+
+### Changed
+- layout: The library surface moves from `src/glfw.mach` to
+  `src/lib/glfw.mach`, following the family layout for artifact entries, and
+  `tools/surface.sh` generates it there (#89). A bare `use glfw;` is
+  unaffected, since it binds the default artifact's entry wherever that lives,
+  and every other module path (`glfw.c`, `glfw.core`, `glfw.window`, ...) is
+  unchanged. The entry module's own full path becomes `glfw.lib.glfw` in place
+  of `glfw.glfw`. `src/lib/` is the artifact that builds a compiled library to
+  ship, not the surface a direct dependency names, so a consumer that imported
+  `use glfw.glfw;` imports the bare `use glfw;` instead. `mach test . --list`
+  collects the same 3 tests as before.
+- demo: The demo leaves the library for `demo/window/`, its own project with
+  its own std pin and a path dependency on the repository root, so the library
+  declares no binary (#89). `[artifact.demo]` and `src/main.mach` are gone, the
+  demo is `demo/window/src/bin/main.mach` and builds to `bin/window`, and it
+  imports the bare `use glfw;` like any consumer. The vendored archive and
+  every platform link stay with the library and cascade to consumers as
+  before, so a consumer still declares nothing beyond the dependency. CI builds
+  the demo as a subproject on every leg and runs the same smoke, archive and
+  PE checks on it.
+- manifest: The system-GLFW opt-in is `tools/system-glfw.sh`, which also moves
+  `export = true` from `[link.glfw-static]` to `[link.glfw]` and
+  `[link.glfw-win]`. A consumer receives every exported entry whatever the
+  library's artifact names, so swapping the artifact's link list alone never
+  reached a consumer, and the demo is now one (#89).
+
+### Fixed
+- readme: The dependency stanza selects releases with `version = "^0.8.0"`, as
+  `mach dep add` writes it, in place of following `branch/main`, and shows the
+  `mach dep add` command first. The requirement line names Mach 5.12 and std
+  8.1 in place of the stale Mach 5.5 and std 5.7 (#83).
+
 ## [0.8.0] - 2026-09-25
 
 ### Changed
