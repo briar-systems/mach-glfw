@@ -2,6 +2,16 @@
 # per-leg checks on what the standard build produced
 set -euo pipefail
 
+# mach builds only the default artifact, the library, without a selector, so the
+# demo every leg checks below is built here
+demo_args=(--bin demo --target "$MACH_CI_TARGET")
+if [ "$MACH_CI_LEG" = x86_64-darwin ]; then
+  demo_args+=(--pie)
+fi
+for profile in $MACH_CI_PROFILES; do
+  "$MACH_COMPILER" build "$MACH_CI_PROJECT" --profile "$profile" "${demo_args[@]}"
+done
+
 # the demo's --smoke run prints the linked GLFW version and a success line
 smoke() {
   local exe=$1 log=$2
