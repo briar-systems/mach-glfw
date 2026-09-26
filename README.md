@@ -48,7 +48,7 @@ git = "https://github.com/briar-systems/mach-glfw"
 version = "^0.8.0"
 ```
 
-Requires Mach 5.12 or newer and std 8.1.
+Requires Mach 6 and std 9.0.
 
 ## Goals
 
@@ -307,7 +307,7 @@ changing the bindings or the manifest.
 ## Tests
 
 `test` blocks live beside the code they cover and are display-free: the
-version query and the pre-init error path (which doubles as the C→Mach
+error code classification and the pre-init error path (which doubles as the C→Mach
 callback ABI regression test). Paths that need a live window — context
 creation, swap, input events — are exercised by running the demo, not by
 `mach test`.

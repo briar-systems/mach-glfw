@@ -1,7 +1,7 @@
 [project]
 id = "glfw"
 version = "0.8.1"
-mach = "^5.12"
+mach = "^6"
 src = "src"
 out = "out/{target.name}/{profile.name}"
 
@@ -495,4 +495,4 @@ need = []
 
 [dep.std]
 git = "https://github.com/briar-systems/mach-std"
-version = "^8.1"
+version = "^9.0"
