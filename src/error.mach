@@ -84,7 +84,7 @@ pub fun take_refusal() Error {
     ret Error.unreported{};
 }
 
-test "error: codes classify to their cases" {
+test error_from_code__classifies {
     val none: opt[Error] = error_from_code(0);
     if (!sel none.none) { ret 1; }
     val first: opt[Error] = error_from_code(0x00010001);
