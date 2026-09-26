@@ -48,7 +48,7 @@ need = []
 
 [dep.std]
 git = "https://github.com/briar-systems/mach-std"
-version = "^9.0"
+ref = "tag/v9.0.0"
 
 # the bindings from this checkout, so the demo always drives the tree it ships with
 [dep.glfw]
