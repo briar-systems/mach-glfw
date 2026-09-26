@@ -158,15 +158,17 @@ pub fun get_proc_address(procname: str) opt[ptr] {
     ret opt[ptr].some{address};
 }
 
+#[testing]
 var test_cb_code: i64 = 0;
 
+#[testing]
 fun test_error_cb(code: i32, desc: *u8) {
     test_cb_code = code::i64;
 }
 
-# display-free: relies on GLFW being uninitialized, so it must not run
-# after any test that calls init().
-test "core: error callback fires with not_initialized before init" {
+# display-free: relies on GLFW being uninitialized, which holds since each test
+# runs in its own process
+test set_error_callback__reports_not_initialized {
     test_cb_code = 0;
     set_error_callback(test_error_cb);
     c.glfwGetError(nil);
@@ -179,14 +181,5 @@ test "core: error callback fires with not_initialized before init" {
     if (!sel taken.not_initialized) { ret 3; }
     val cleared: opt[Error] = error.take_error();
     if (!sel cleared.none) { ret 4; }
-    ret 0;
-}
-
-test "core: get_version matches linked 3.x" {
-    var major: i32 = 0;
-    var minor: i32 = 0;
-    var rev:   i32 = 0;
-    get_version(?major, ?minor, ?rev);
-    if (major != 3) { ret 1; }
     ret 0;
 }

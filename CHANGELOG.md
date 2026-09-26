@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-26
+
+### Breaking
+- toolchain: The library and the demo require Mach 6 (`mach = "^6"`) and
+  std 9.0 (`^9.0`, pinned to v9.0.0), and CI seeds Mach v6.0.0 (#93). A
+  consumer on Mach 5 or std 8 stays on 0.8.x. The public surface is unchanged.
+
+### Changed
+- tests: Tests are named `test <identifier>` as Mach 6 requires and pruned to
+  the test policy (#93). The error callback fixtures are `#[testing]`. The
+  `get_version` major-number test is removed, since every CI leg's smoke run
+  already requires GLFW 3.4.0, so `mach test .` runs 2 tests in place of 3.
+- readme: The dependency stanza selects `version = "^0.9.0"`, and the
+  requirement line names Mach 6 and std 9.0 (#93).
+
 ## [0.8.1] - 2026-09-25
 
 ### Changed
