@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- target: The library and the demo declare a `linux-arm64` target (`aarch64`,
+  `linux`, `aapcs64`), built and tested natively on `ubuntu-24.04-arm` in CI
+  (#99). Every artifact already lists all targets.
+
 ## [0.9.0] - 2026-09-26
 
 ### Breaking
