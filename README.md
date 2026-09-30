@@ -45,7 +45,7 @@ That writes this stanza to `mach.toml`:
 ```toml
 [dep.glfw]
 git = "https://github.com/briar-systems/mach-glfw"
-version = "^0.9.0"
+version = "^0.10.0"
 ```
 
 Requires Mach 6 and std 9.0.

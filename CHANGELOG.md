@@ -7,10 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-30
+
 ### Added
 - target: The library and the demo declare a `linux-arm64` target (`aarch64`,
   `linux`, `aapcs64`), built and tested natively on `ubuntu-24.04-arm` in CI
   (#99). Every artifact already lists all targets.
+
+### Changed
+- build: The linux archive is built with `-fPIC` in place of `-fno-pic
+  -fno-PIE` (#99). Mach's ELF linker binds GOT relocations since mach#2534,
+  and on aarch64 the non-PIC archive's direct reference to glibc's
+  `__stack_chk_guard` had no dynamic binding.
+
+### Fixed
+- build: `tools/build-glfw.sh` built natively whenever the target os matched
+  the host, whatever the isa, so an arm64 host building an x86_64 linux
+  target compiled aarch64 objects into it. It now builds natively only when
+  the isa matches too (#98).
 
 ## [0.9.0] - 2026-09-26
 
