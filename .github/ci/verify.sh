@@ -16,10 +16,12 @@ smoke() {
 }
 
 case "$MACH_CI_LEG" in
-  x86_64-linux)
-    tools/surface.sh check
-    echo "surface up to date"
-    tools/test-pack-symbols.sh
+  x86_64-linux|aarch64-linux)
+    if [ "$MACH_CI_PRIMARY" = true ]; then
+      tools/surface.sh check
+      echo "surface up to date"
+      tools/test-pack-symbols.sh
+    fi
     for profile in $MACH_CI_PROFILES; do
       exe="$out/$profile/bin/window"
       archive="$out/$profile/vendor/glfw/libglfw.a"

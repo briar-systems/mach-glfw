@@ -47,9 +47,9 @@ linux)
            x11_init.c x11_monitor.c x11_window.c glx_context.c
            wl_init.c wl_monitor.c wl_window.c"
     DEFS="-D_GLFW_X11 -D_GLFW_WAYLAND -D_DEFAULT_SOURCE"
-    # mach's elf linker resolves no GOT relocation, so the archive has to be
-    # non-pic; that also means consumers cannot link it with --pie
-    FLAGS="$FLAGS -fno-pic -fno-PIE"
+    # position-independent, so libc data such as the stack guard is reached
+    # through the GOT, which mach's elf linker binds
+    FLAGS="$FLAGS -fPIC"
     ;;
 windows)
     TRIPLE=$ISA-windows-gnu
