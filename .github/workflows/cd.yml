@@ -34,7 +34,8 @@ jobs:
       profile: release
       runners: '["ubuntu-latest", "ubuntu-24.04-arm", "windows-latest", "macos-15-intel"]'
 
-  # one archive per artifact and target, cross-compiled at the paths mach's build plan reports
+  # one archive per artifact and target, cross-compiled at the paths mach's build plan reports.
+  # the vendored glfw needs apple's sdk for darwin, so darwin is not packaged
   package:
     needs: verify
     runs-on: ubuntu-latest
@@ -46,13 +47,19 @@ jobs:
           export MACH_INSTALL_DIR="$RUNNER_TEMP/mach"
           curl -fsSL "https://raw.githubusercontent.com/briar-systems/mach/v$MACH_VERSION/dist/install.sh" | sh
           echo "$MACH_INSTALL_DIR" >> "$GITHUB_PATH"
+      # the vendored glfw build needs the x11, wayland and xkbcommon headers, and zig cc for the cross targets
+      - run: sudo apt-get update && sudo apt-get install -y xorg-dev libwayland-bin libwayland-dev libxkbcommon-dev
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+          use-cache: false
       - run: mach dep pull .
-      - run: mach build . --all -p release
+      - run: mach build . --all -t 'linux-*' -t windows -p release
       - name: package
         run: |
           version=${GITHUB_REF_NAME#v}
           mkdir dist
-          mach build . --all -p release --plan | awk '
+          mach build . --all -t 'linux-*' -t windows -p release --plan | awk '
             /^unit / { name = $3; target = $6 }
             $1 == "tuple" { split($2, t, "-"); os = t[2] }
             $1 == "out" { print name, target, os, $2 }' |
