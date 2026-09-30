@@ -3,7 +3,7 @@
 #   tools/build-glfw.sh <outdir>    writes <outdir>/libglfw.a
 #
 # mach exports MACH_TARGET_{ISA,OS,ABI} for the build cell. a target matching the
-# host builds with the system cc; anything else goes through zig cc, which
+# host in both os and isa builds with the system cc; anything else goes through zig cc, which
 # carries the cross sysroots. CC/AR/SYSROOT/MACOS_SDK override the defaults.
 #
 # the darwin backend is objective-c against the apple frameworks, so it builds
@@ -31,6 +31,13 @@ Darwin) HOST=darwin ;;
 *)      HOST=other ;;
 esac
 
+# uname spells isas differently per os; normalize to mach's names
+case $(uname -m) in
+x86_64|amd64)  HOST_ISA=x86_64 ;;
+arm64|aarch64) HOST_ISA=aarch64 ;;
+*)             HOST_ISA=$(uname -m) ;;
+esac
+
 case $OS in
 linux)
     TRIPLE=$ISA-linux-gnu
@@ -40,9 +47,9 @@ linux)
            x11_init.c x11_monitor.c x11_window.c glx_context.c
            wl_init.c wl_monitor.c wl_window.c"
     DEFS="-D_GLFW_X11 -D_GLFW_WAYLAND -D_DEFAULT_SOURCE"
-    # mach's elf linker resolves no GOT relocation, so the archive has to be
-    # non-pic; that also means consumers cannot link it with --pie
-    FLAGS="$FLAGS -fno-pic -fno-PIE"
+    # position-independent, so libc data such as the stack guard is reached
+    # through the GOT, which mach's elf linker binds
+    FLAGS="$FLAGS -fPIC"
     ;;
 windows)
     TRIPLE=$ISA-windows-gnu
@@ -65,7 +72,7 @@ darwin)
     ;;
 esac
 
-if [ "$OS" = "$HOST" ]; then
+if [ "$OS" = "$HOST" ] && [ "$ISA" = "$HOST_ISA" ]; then
     CC=${CC:-cc}
     AR=${AR:-ar}
     TFLAG=

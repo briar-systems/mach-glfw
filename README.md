@@ -45,7 +45,7 @@ That writes this stanza to `mach.toml`:
 ```toml
 [dep.glfw]
 git = "https://github.com/briar-systems/mach-glfw"
-version = "^0.9.0"
+version = "^0.10.0"
 ```
 
 Requires Mach 6 and std 9.0.
@@ -246,9 +246,8 @@ selected target's concrete dependency: the resolved ELF SONAME (for example
 `libglfw.so.3`) on Linux, `glfw3.dll` on Windows, or the resolved dylib's
 `LC_ID_DYLIB` install name on Darwin.
 
-The linux archive is currently built with `-fno-pic -fno-PIE` because Mach does
-not yet support ELF's relaxable `R_X86_64_REX_GOTPCRELX` relocation
-(mach#2534), so linux consumers cannot link this archive with `--pie` yet.
+The linux archive is built with `-fPIC`, so libc data reaches it through the GOT
+that Mach's ELF linker binds.
 Darwin retains the toolchain's normal PIC code generation.
 
 **System-GLFW fallback.** The `system` entries remain declared in `mach.toml`
