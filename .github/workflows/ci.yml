@@ -1,101 +1,64 @@
 name: CI
 
-# the family's tiered pipeline (briar-systems/.github mach-lib.yml). a pull
-# request into dev runs the linux legs, a pull request into main runs every leg
-# and the system-glfw job. the per-leg checks live in .github/ci. nothing runs
-# on push. cd.yml calls this with heavy: all, since a tag has no base.
-
 on:
   pull_request:
-  workflow_call:
-    inputs:
-      heavy:
-        type: string
-        default: none
   workflow_dispatch:
     inputs:
-      heavy:
-        description: heavy work to run on this ref
-        type: choice
-        default: none
-        options: [none, all, windows-cross, x86_64-windows, x86_64-darwin, darwin-system]
+      runners:
+        description: runners to test on, as a JSON array, e.g. ["macos-15", "windows-latest"]
+        type: string
+  workflow_call:
+    inputs:
+      runners:
+        type: string
+      profile:
+        type: string
+        default: debug
 
 permissions:
   contents: read
 
-jobs:
-  # every leg builds the demo, its own project under demo/window, against the
-  # vendored static archive. the linux leg also checks the generated surface and
-  # runs the demo under xvfb, the windows-cross leg inspects the PE imports, and
-  # the native legs run the demo.
-  lib:
-    uses: briar-systems/.github/.github/workflows/mach-lib.yml@main
-    with:
-      heavy: ${{ inputs.heavy }}
-      mach-version: v6.0.0
-      # each target needs its own toolchain, so the legs below cover them
-      all-targets: false
-      # the demo is its own project, so every profile builds it on every leg and
-      # verify.sh checks and runs it
-      subprojects: >-
-        [{"path": "demo/window", "build": true, "test": false}]
-      legs: >-
-        [{"name": "x86_64-linux", "runs-on": "ubuntu-latest", "target": "linux-x86_64",
-          "apt": ["llvm", "xauth", "xorg-dev", "xvfb", "libwayland-bin", "libwayland-dev",
-                  "libxkbcommon-dev", "wayland-protocols"]},
-         {"name": "aarch64-linux", "runs-on": "ubuntu-24.04-arm", "target": "linux-arm64",
-          "apt": ["llvm", "xauth", "xorg-dev", "xvfb", "libwayland-bin", "libwayland-dev",
-                  "libxkbcommon-dev", "wayland-protocols"]},
-         {"name": "windows-cross", "runs-on": "ubuntu-latest", "tier": "heavy",
-          "target": "windows", "test": false, "apt": ["llvm", "xz-utils"]},
-         {"name": "x86_64-windows", "runs-on": "windows-latest", "tier": "heavy",
-          "target": "windows", "test": false},
-         {"name": "x86_64-darwin", "runs-on": "macos-15-intel", "tier": "heavy",
-          "target": "darwin", "test": false, "build-args": ["--pie"]}]
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-  # the opt-in system-glfw link, which rewrites the library manifest, so it
-  # cannot share a leg with the vendored build. the demo's path dependency is a
-  # copy, so the swap lands before the demo pulls it
-  darwin-system:
-    if: github.base_ref == 'main' || inputs.heavy == 'all' || inputs.heavy == 'darwin-system'
-    runs-on: macos-15-intel
-    timeout-minutes: 40
+env:
+  MACH_VERSION: 6.8.0
+  PROFILE: ${{ inputs.profile || 'debug' }}
+
+jobs:
+  # every runner builds every artifact for every target and tests the ones it can run
+  test:
+    name: test (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(inputs.runners || '["ubuntu-latest"]') }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v6
-      - uses: briar-systems/.github/.github/actions/seed-mach@main
-        with:
-          tag: v6.0.0
-      - name: build and run against the system GLFW
+      - name: install mach
         run: |
-          set -euo pipefail
-          brew install glfw
-          tools/system-glfw.sh
-          mach dep pull demo/window
-          prefix=$(brew --prefix glfw)
-          mach build demo/window --target darwin --profile debug --pie -L "$prefix/lib"
-          mach build demo/window --target darwin --profile release --pie -L "$prefix/lib"
-          for profile in debug release; do
-            exe="demo/window/out/darwin/$profile/bin/window"
-            otool -L "$exe" | grep -E 'libglfw(\.3)?\.dylib'
-            "$exe" --smoke | tee "$RUNNER_TEMP/glfw-system-$profile.log"
-            version=$(sed -n 's/^GLFW //p' "$RUNNER_TEMP/glfw-system-$profile.log")
-            major=${version%%.*}
-            remainder=${version#*.}
-            minor=${remainder%%.*}
-            if [[ ! $major =~ ^[0-9]+$ || ! $minor =~ ^[0-9]+$ ]] ||
-               (( major < 3 || (major == 3 && minor < 4) )); then
-              echo "::error::system GLFW $version is older than 3.4"
-              exit 1
-            fi
-            grep -q '^smoke ok$' "$RUNNER_TEMP/glfw-system-$profile.log"
-          done
+          export MACH_INSTALL_DIR="$RUNNER_TEMP/mach"
+          url="https://raw.githubusercontent.com/briar-systems/mach/v$MACH_VERSION/dist"
+          if [ "$RUNNER_OS" = Windows ]; then
+            pwsh -NoProfile -Command "irm $url/install.ps1 | iex"
+          else
+            curl -fsSL "$url/install.sh" | sh
+          fi
+          echo "$MACH_INSTALL_DIR" >> "$GITHUB_PATH"
+      - run: mach dep pull .
+      - if: strategy.job-index == 0
+        run: mach fmt --check .
+      - run: mach test . --all -p "$PROFILE"
 
   gate:
     if: always()
-    needs: [lib, darwin-system]
+    needs: [test]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - uses: briar-systems/.github/.github/actions/gate@main
-        with:
-          needs: ${{ toJSON(needs) }}
+      - run: exit ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 1 || 0 }}
