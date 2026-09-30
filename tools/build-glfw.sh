@@ -43,6 +43,9 @@ linux)
     # mach's elf linker resolves no GOT relocation, so the archive has to be
     # non-pic; that also means consumers cannot link it with --pie
     FLAGS="$FLAGS -fno-pic -fno-PIE"
+    # distro compilers default to the stack protector, whose aarch64 guard is a
+    # data symbol mach's linker has no libc to bind
+    FLAGS="$FLAGS -fno-stack-protector"
     ;;
 windows)
     TRIPLE=$ISA-windows-gnu
