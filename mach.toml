@@ -319,7 +319,7 @@ name = "/usr/lib/libobjc.A.dylib"
 library = "/usr/lib/libobjc.A.dylib"
 symbols = [
     "OBJC_CLASS_$_NSObject", "OBJC_METACLASS_$_NSObject",
-    "_objc_empty_cache", "objc_alloc", "objc_alloc_init",
+    "_objc_empty_cache", "objc_alloc", "objc_alloc_init", "objc_autorelease",
     "objc_autoreleasePoolPop", "objc_autoreleasePoolPush",
     "objc_enumerationMutation", "objc_msgSend", "objc_msgSendSuper2",
     "objc_msgSend_stret", "objc_opt_class", "objc_opt_isKindOfClass",
@@ -421,7 +421,7 @@ symbols = [
     "CFBundleGetFunctionPointerForName", "CFBundleGetMainBundle",
     "CFDictionaryCreateMutable", "CFDictionaryGetValue",
     "CFDictionaryGetValueIfPresent", "CFDictionarySetValue", "CFGetTypeID",
-    "CFLocaleCopyPreferredLanguages",
+    "CFLocaleCopyPreferredLanguages", "CFMakeCollectable",
     "CFNumberCreate", "CFNumberGetValue", "CFRelease", "CFRunLoopGetMain",
     "CFRunLoopRunInMode", "CFStringCompare", "CFStringCreateWithCString",
     "CFStringCreateWithCharactersNoCopy", "CFStringGetCString",
