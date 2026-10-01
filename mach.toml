@@ -238,7 +238,7 @@ source = "system"
 name = "api-ms-win-crt-string-l1-1-0.dll"
 symbols = [
     "strcmp", "strcpy", "strcspn", "strncmp", "strncpy",
-    "strspn", "strtok", "wcscmp", "wcscpy",
+    "strspn", "strtok", "wcscmp", "wcscpy", "wcslen",
 ]
 os = ["windows"]
 isa = "*"
