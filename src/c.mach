@@ -1,4 +1,4 @@
-# raw C-ABI imports of GLFW 3.4
+# raw C-ABI imports of GLFW 3.4 with the upstream IME patch
 #
 # every GLFW function is a pub ext fun attributed to the stable logical library
 # name `glfw`, with its C name and C-faithful types, in glfw3.h declaration
@@ -373,6 +373,26 @@ pub ext fun glfwDestroyCursor(cursor: ptr);
 #[library("glfw")]
 pub ext fun glfwSetCursor(window: ptr, cursor: ptr);
 
+# retrieves the preedit cursor rectangle that places the IME candidate window
+#[library("glfw")]
+pub ext fun glfwGetPreeditCursorRectangle(window: ptr, x: *i32, y: *i32, w: *i32, h: *i32);
+
+# sets the preedit cursor rectangle that places the IME candidate window
+#[library("glfw")]
+pub ext fun glfwSetPreeditCursorRectangle(window: ptr, x: i32, y: i32, w: i32, h: i32);
+
+# resets the IME's preedit text
+#[library("glfw")]
+pub ext fun glfwResetPreeditText(window: ptr);
+
+# sets whether the window is in a text input context
+#[library("glfw")]
+pub ext fun glfwSetTextInputFocus(window: ptr, focused: i32);
+
+# returns the codepoints of a preedit candidate
+#[library("glfw")]
+pub ext fun glfwGetPreeditCandidate(window: ptr, index: i32, textCount: *i32) *u32;
+
 # sets the key callback for the window, returns the previous one
 #[library("glfw")]
 pub ext fun glfwSetKeyCallback(window: ptr, callback: fun(ptr, i32, i32, i32, i32)) ptr;
@@ -384,6 +404,18 @@ pub ext fun glfwSetCharCallback(window: ptr, callback: fun(ptr, u32)) ptr;
 # sets the character-with-modifiers callback for the window, returns the previous one
 #[library("glfw")]
 pub ext fun glfwSetCharModsCallback(window: ptr, callback: fun(ptr, u32, i32)) ptr;
+
+# sets the IME preedit callback for the window, returns the previous one
+#[library("glfw")]
+pub ext fun glfwSetPreeditCallback(window: ptr, callback: fun(ptr, i32, *u32, i32, *i32, i32, i32)) ptr;
+
+# sets the IME status change callback for the window, returns the previous one
+#[library("glfw")]
+pub ext fun glfwSetIMEStatusCallback(window: ptr, callback: fun(ptr)) ptr;
+
+# sets the preedit candidate callback for the window, returns the previous one
+#[library("glfw")]
+pub ext fun glfwSetPreeditCandidateCallback(window: ptr, callback: fun(ptr, i32, i32, i32, i32)) ptr;
 
 # sets the mouse button callback for the window, returns the previous one
 #[library("glfw")]
