@@ -421,6 +421,7 @@ symbols = [
     "CFBundleGetFunctionPointerForName", "CFBundleGetMainBundle",
     "CFDictionaryCreateMutable", "CFDictionaryGetValue",
     "CFDictionaryGetValueIfPresent", "CFDictionarySetValue", "CFGetTypeID",
+    "CFLocaleCopyPreferredLanguages",
     "CFNumberCreate", "CFNumberGetValue", "CFRelease", "CFRunLoopGetMain",
     "CFRunLoopRunInMode", "CFStringCompare", "CFStringCreateWithCString",
     "CFStringCreateWithCharactersNoCopy", "CFStringGetCString",
