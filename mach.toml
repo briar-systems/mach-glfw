@@ -351,7 +351,8 @@ symbols = [
     "OBJC_CLASS_$_NSMenu", "OBJC_CLASS_$_NSMenuItem",
     "OBJC_CLASS_$_NSOpenGLContext", "OBJC_CLASS_$_NSOpenGLPixelFormat",
     "OBJC_CLASS_$_NSPasteboard", "OBJC_CLASS_$_NSRunningApplication",
-    "OBJC_CLASS_$_NSScreen", "OBJC_CLASS_$_NSTrackingArea",
+    "OBJC_CLASS_$_NSScreen", "OBJC_CLASS_$_NSTextInputContext",
+    "OBJC_CLASS_$_NSTrackingArea",
     "OBJC_CLASS_$_NSView", "OBJC_CLASS_$_NSWindow",
     "OBJC_METACLASS_$_NSView", "OBJC_METACLASS_$_NSWindow",
 ]
