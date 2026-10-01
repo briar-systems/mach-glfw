@@ -2165,6 +2165,7 @@ static void textInputV3Enter(void* data,
     {
         zwp_text_input_v3_enable(textInputV3);
         zwp_text_input_v3_commit(textInputV3);
+        window->wl.textInputV3Cursor.committed = GLFW_FALSE;
     }
 }
 
@@ -3677,8 +3678,24 @@ void _glfwUpdatePreeditCursorRectangleWayland(_GLFWwindow* window)
 
     if (window->wl.textInputV3)
     {
+        // enable resets the rectangle, and the compositor answers every commit
+        // with a done event that lands back here, so commit only a change
+        if (window->wl.textInputV3Cursor.committed &&
+            window->wl.textInputV3Cursor.x == x &&
+            window->wl.textInputV3Cursor.y == y &&
+            window->wl.textInputV3Cursor.w == w &&
+            window->wl.textInputV3Cursor.h == h)
+        {
+            return;
+        }
+
         zwp_text_input_v3_set_cursor_rectangle(window->wl.textInputV3, x, y, w, h);
         zwp_text_input_v3_commit(window->wl.textInputV3);
+        window->wl.textInputV3Cursor.committed = GLFW_TRUE;
+        window->wl.textInputV3Cursor.x = x;
+        window->wl.textInputV3Cursor.y = y;
+        window->wl.textInputV3Cursor.w = w;
+        window->wl.textInputV3Cursor.h = h;
     }
     else if (window->wl.textInputV1)
         zwp_text_input_v1_set_cursor_rectangle(window->wl.textInputV1, x, y, w, h);
@@ -3693,7 +3710,10 @@ void _glfwSetTextInputFocusWayland(_GLFWwindow* window, GLFWbool focused)
     if (window->wl.textInputV3)
     {
         if (focused)
+        {
             zwp_text_input_v3_enable(window->wl.textInputV3);
+            window->wl.textInputV3Cursor.committed = GLFW_FALSE;
+        }
         else
         {
             zwp_text_input_v3_disable(window->wl.textInputV3);

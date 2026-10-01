@@ -416,6 +416,12 @@ typedef struct _GLFWwindowWayland
 
     struct zwp_text_input_v1* textInputV1;
     struct zwp_text_input_v3* textInputV3;
+    // the cursor rectangle last committed on textInputV3, so a done event
+    // answering that commit does not commit it again
+    struct {
+        GLFWbool committed;
+        int x, y, w, h;
+    } textInputV3Cursor;
     struct {
         char* preeditText;
         char* commitTextOnReset;

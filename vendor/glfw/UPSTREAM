@@ -33,11 +33,21 @@ tools/build-glfw.sh runs through wayland-scanner. master is 113 commits past
                         handling and activates text-input v1 on any press, as
                         upstream does.
 
-patches/ime-support.patch is that adapted diff against the 3.4 tree, paths
-relative to this directory. `patch -p1 < patches/ime-support.patch` on a fresh
-3.4 extract reproduces the vendored sources exactly.
+one local fix sits on top, not yet upstream: on wayland, the patch's
+text-input v3 done handler re-commits the cursor rectangle, and a compositor
+that answers every commit with a done event (kwin does) loops forever, firing
+the preedit callback tens of thousands of times a second. the rectangle is now
+committed only when it differs from the one last committed since enable.
+
+patches/ime-support.patch is the adapted upstream diff against the 3.4 tree and
+patches/wayland-text-input-v3-commit-loop.patch is the local fix, paths
+relative to this directory. on a fresh 3.4 extract,
+`patch -p1 < patches/ime-support.patch` then
+`patch -p1 < patches/wayland-text-input-v3-commit-loop.patch` reproduce the
+vendored sources exactly.
 
 to bump: re-extract the new tag and copy the same four paths. if the new tag
-carries IME support, drop the patch; otherwise re-apply the newest im-support
-head and record it here. see tools/build-glfw.sh for the compilation matrix
+carries IME support, drop the patches whose change it already has; otherwise
+re-apply the newest im-support head, and the local fix while upstream lacks
+it, and record both here. see tools/build-glfw.sh for the compilation matrix
 that consumes them.
