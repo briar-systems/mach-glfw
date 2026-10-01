@@ -104,7 +104,8 @@ if [ "$OS" = linux ]; then
     for p in wayland viewporter xdg-shell fractional-scale-v1 \
              xdg-activation-v1 xdg-decoration-unstable-v1 \
              idle-inhibit-unstable-v1 pointer-constraints-unstable-v1 \
-             relative-pointer-unstable-v1; do
+             relative-pointer-unstable-v1 text-input-unstable-v1 \
+             text-input-unstable-v3; do
         wayland-scanner client-header "vendor/glfw/deps/wayland/$p.xml" "$WL/$p-client-protocol.h"
         wayland-scanner private-code  "vendor/glfw/deps/wayland/$p.xml" "$WL/$p-client-protocol-code.h"
     done

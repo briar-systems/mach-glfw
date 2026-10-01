@@ -1,13 +1,15 @@
 # init hint, window hint, and window attribute ids plus their values
 
 # init hints
-pub val JOYSTICK_HAT_BUTTONS:   i32 = 0x00050001;
-pub val ANGLE_PLATFORM_TYPE:    i32 = 0x00050002;
-pub val PLATFORM:               i32 = 0x00050003;
-pub val COCOA_CHDIR_RESOURCES:  i32 = 0x00051001;
-pub val COCOA_MENUBAR:          i32 = 0x00051002;
-pub val X11_XCB_VULKAN_SURFACE: i32 = 0x00052001;
-pub val WAYLAND_LIBDECOR:       i32 = 0x00053001;
+pub val JOYSTICK_HAT_BUTTONS:     i32 = 0x00050001;
+pub val ANGLE_PLATFORM_TYPE:      i32 = 0x00050002;
+pub val PLATFORM:                 i32 = 0x00050003;
+pub val MANAGE_PREEDIT_CANDIDATE: i32 = 0x00050004;
+pub val COCOA_CHDIR_RESOURCES:    i32 = 0x00051001;
+pub val COCOA_MENUBAR:            i32 = 0x00051002;
+pub val X11_XCB_VULKAN_SURFACE:   i32 = 0x00052001;
+pub val X11_ONTHESPOT:            i32 = 0x00052002;
+pub val WAYLAND_LIBDECOR:         i32 = 0x00053001;
 
 # window hints and attributes
 pub val FOCUSED:                 i32 = 0x00020001;

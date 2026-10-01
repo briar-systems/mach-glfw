@@ -7,5 +7,47 @@ trimmed to the library build inputs only: include/GLFW public headers, src/
 XML, and LICENSE.md. upstream CMake files, docs, tests, examples, and the
 example-only deps/ entries are not carried.
 
-to bump: re-extract the new tag and copy the same four paths. see
-tools/build-glfw.sh for the compilation matrix that consumes them.
+patched with the upstream IME support work, which no GLFW release carries yet
+(3.5.1 does not; it is still open against master):
+
+  pull:    https://github.com/glfw/glfw/pull/2130 ("Add IME support for each platform")
+  branch:  https://github.com/clear-code/glfw/tree/im-support
+  head:    068858eece20cd6b6128f6f07a1d61f2dc2cbfaf ("Wayland: Fix text input v3 preedit cursor offsets")
+  base:    92dcf4ce74f2e2554a98fea09be7c705c17daa5a (glfw master, the branch's merge base)
+
+taken: `git diff 92dcf4ce 068858ee -- include src deps`, every hunk except
+src/CMakeLists.txt, applied to the 3.4 tree. that adds
+deps/wayland/text-input-unstable-v1.xml and text-input-unstable-v3.xml, which
+tools/build-glfw.sh runs through wayland-scanner. master is 113 commits past
+3.4, so six files needed resolving against 3.4:
+
+  include/GLFW/glfw3.h  GLFW_IME keeps upstream's value 0x00033007. master's
+                        GLFW_UNLIMITED_MOUSE_BUTTONS (3.5) is not taken, nor
+                        its mention in the glfwSetInputMode docs.
+  src/init.c            onTheSpotIMStyle defaults to GLFW_FALSE (3.4 keeps
+  src/internal.h        GLFWbool where master uses bool). master's
+                        disableMouseButtonLimit window field is not taken.
+  src/input.c           only the GLFW_IME input mode cases are taken.
+  src/win32_init.c      imm32 is freed in 3.4's freeLibraries().
+  src/wl_window.c       pointerHandleButton keeps 3.4's pointerFocus/hovered
+                        handling and activates text-input v1 on any press, as
+                        upstream does.
+
+one local fix sits on top, not yet upstream: on wayland, the patch's
+text-input v3 done handler re-commits the cursor rectangle, and a compositor
+that answers every commit with a done event (kwin does) loops forever, firing
+the preedit callback tens of thousands of times a second. the rectangle is now
+committed only when it differs from the one last committed since enable.
+
+patches/ime-support.patch is the adapted upstream diff against the 3.4 tree and
+patches/wayland-text-input-v3-commit-loop.patch is the local fix, paths
+relative to this directory. on a fresh 3.4 extract,
+`patch -p1 < patches/ime-support.patch` then
+`patch -p1 < patches/wayland-text-input-v3-commit-loop.patch` reproduce the
+vendored sources exactly.
+
+to bump: re-extract the new tag and copy the same four paths. if the new tag
+carries IME support, drop the patches whose change it already has; otherwise
+re-apply the newest im-support head, and the local fix while upstream lacks
+it, and record both here. see tools/build-glfw.sh for the compilation matrix
+that consumes them.

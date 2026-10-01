@@ -1,0 +1,61 @@
+--- a/src/wl_platform.h
++++ b/src/wl_platform.h
+@@ -416,6 +416,12 @@
+ 
+     struct zwp_text_input_v1* textInputV1;
+     struct zwp_text_input_v3* textInputV3;
++    // the cursor rectangle last committed on textInputV3, so a done event
++    // answering that commit does not commit it again
++    struct {
++        GLFWbool committed;
++        int x, y, w, h;
++    } textInputV3Cursor;
+     struct {
+         char* preeditText;
+         char* commitTextOnReset;
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -2165,6 +2165,7 @@
+     {
+         zwp_text_input_v3_enable(textInputV3);
+         zwp_text_input_v3_commit(textInputV3);
++        window->wl.textInputV3Cursor.committed = GLFW_FALSE;
+     }
+ }
+ 
+@@ -3677,8 +3678,24 @@
+ 
+     if (window->wl.textInputV3)
+     {
++        // enable resets the rectangle, and the compositor answers every commit
++        // with a done event that lands back here, so commit only a change
++        if (window->wl.textInputV3Cursor.committed &&
++            window->wl.textInputV3Cursor.x == x &&
++            window->wl.textInputV3Cursor.y == y &&
++            window->wl.textInputV3Cursor.w == w &&
++            window->wl.textInputV3Cursor.h == h)
++        {
++            return;
++        }
++
+         zwp_text_input_v3_set_cursor_rectangle(window->wl.textInputV3, x, y, w, h);
+         zwp_text_input_v3_commit(window->wl.textInputV3);
++        window->wl.textInputV3Cursor.committed = GLFW_TRUE;
++        window->wl.textInputV3Cursor.x = x;
++        window->wl.textInputV3Cursor.y = y;
++        window->wl.textInputV3Cursor.w = w;
++        window->wl.textInputV3Cursor.h = h;
+     }
+     else if (window->wl.textInputV1)
+         zwp_text_input_v1_set_cursor_rectangle(window->wl.textInputV1, x, y, w, h);
+@@ -3693,7 +3710,10 @@
+     if (window->wl.textInputV3)
+     {
+         if (focused)
++        {
+             zwp_text_input_v3_enable(window->wl.textInputV3);
++            window->wl.textInputV3Cursor.committed = GLFW_FALSE;
++        }
+         else
+         {
+             zwp_text_input_v3_disable(window->wl.textInputV3);
