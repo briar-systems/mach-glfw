@@ -1,12 +1,11 @@
 [project]
 id = "glfw"
-version = "0.10.0"
+version = "0.11.0"
 mach = "^6"
 src = "src"
 out = "out/{target.name}/{profile.name}"
 
 [target.linux-x86_64]
-default = true
 isa = "x86_64"
 os  = "linux"
 abi = "sysv64"
@@ -239,7 +238,7 @@ source = "system"
 name = "api-ms-win-crt-string-l1-1-0.dll"
 symbols = [
     "strcmp", "strcpy", "strcspn", "strncmp", "strncpy",
-    "strspn", "strtok", "wcscmp", "wcscpy",
+    "strspn", "strtok", "wcscmp", "wcscpy", "wcslen",
 ]
 os = ["windows"]
 isa = "*"
@@ -352,7 +351,8 @@ symbols = [
     "OBJC_CLASS_$_NSMenu", "OBJC_CLASS_$_NSMenuItem",
     "OBJC_CLASS_$_NSOpenGLContext", "OBJC_CLASS_$_NSOpenGLPixelFormat",
     "OBJC_CLASS_$_NSPasteboard", "OBJC_CLASS_$_NSRunningApplication",
-    "OBJC_CLASS_$_NSScreen", "OBJC_CLASS_$_NSTrackingArea",
+    "OBJC_CLASS_$_NSScreen", "OBJC_CLASS_$_NSTextInputContext",
+    "OBJC_CLASS_$_NSTrackingArea",
     "OBJC_CLASS_$_NSView", "OBJC_CLASS_$_NSWindow",
     "OBJC_METACLASS_$_NSView", "OBJC_METACLASS_$_NSWindow",
 ]

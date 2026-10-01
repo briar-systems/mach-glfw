@@ -20,6 +20,7 @@ pub val STICKY_KEYS:          i32 = 0x00033002;
 pub val STICKY_MOUSE_BUTTONS: i32 = 0x00033003;
 pub val LOCK_KEY_MODS:        i32 = 0x00033004;
 pub val RAW_MOUSE_MOTION:     i32 = 0x00033005;
+pub val IME:                  i32 = 0x00033007;
 
 # values for the CURSOR input mode.
 pub val CURSOR_NORMAL:   i32 = 0x00034001;
@@ -40,6 +41,20 @@ pub def KeyFun: fun(ptr, i32, i32, i32, i32);
 pub def CharFun: fun(ptr, u32);
 # text input with modifiers callback (window, codepoint, mods)
 pub def CharModsFun: fun(ptr, u32, i32);
+# IME preedit callback (window, codepoint count, codepoints, block count,
+# block sizes, focused block, caret). the codepoints are the composition in
+# progress, split into block count attributed blocks whose lengths are block
+# sizes. caret is a codepoint index into the composition. a count of zero means
+# the composition ended, committed or cancelled, or that none is in progress.
+# committed text arrives through the char callback. the arrays are GLFW-owned
+# and valid only for the call.
+pub def PreeditFun: fun(ptr, i32, *u32, i32, *i32, i32, i32);
+# IME on/off change callback (window)
+pub def ImeStatusFun: fun(ptr);
+# preedit candidate list callback (window, candidate count, selected index,
+# page start, page size), win32 only and only with the
+# hint.MANAGE_PREEDIT_CANDIDATE init hint
+pub def PreeditCandidateFun: fun(ptr, i32, i32, i32, i32);
 # mouse button callback (window, button, action, mods)
 pub def MouseButtonFun: fun(ptr, i32, i32, i32);
 # cursor position callback (window, xpos, ypos)
@@ -174,6 +189,57 @@ pub fun set_cursor(window: Window, cursor: opt[Cursor]) {
     c.glfwSetCursor(window.handle, nil);
 }
 
+# the rectangle the IME places its candidate window against
+# ---
+# window: window to query
+# x:      receives the x position, in window coordinates
+# y:      receives the y position, in window coordinates
+# w:      receives the width
+# h:      receives the height
+pub fun get_preedit_cursor_rectangle(window: Window, x: *i32, y: *i32, w: *i32, h: *i32) {
+    c.glfwGetPreeditCursorRectangle(window.handle, x, y, w, h);
+}
+
+# set the rectangle the IME places its candidate window against, normally the
+# caret of the text being composed
+# ---
+# window: window to change
+# x:      x position, in window coordinates
+# y:      y position, in window coordinates
+# w:      width
+# h:      height
+pub fun set_preedit_cursor_rectangle(window: Window, x: i32, y: i32, w: i32, h: i32) {
+    c.glfwSetPreeditCursorRectangle(window.handle, x, y, w, h);
+}
+
+# discard the composition in progress, a no-op on wayland
+# ---
+# window: window to reset
+pub fun reset_preedit_text(window: Window) {
+    c.glfwResetPreeditText(window.handle);
+}
+
+# declare whether the window is in a text input context, such as a focused
+# text field. a window never told keeps the platform's default text input
+# behaviour.
+# ---
+# window:  window to change
+# focused: true on entering a text input context, false on leaving it
+pub fun set_text_input_focus(window: Window, focused: bool) {
+    c.glfwSetTextInputFocus(window.handle, focused::i32);
+}
+
+# codepoints of a preedit candidate, win32 only and only with the
+# hint.MANAGE_PREEDIT_CANDIDATE init hint
+# ---
+# window: window to query
+# index:  candidate index
+# count:  receives the codepoint count, zero where unsupported
+# ret:    GLFW-owned array, count entries long
+pub fun get_preedit_candidate(window: Window, index: i32, count: *i32) *u32 {
+    ret c.glfwGetPreeditCandidate(window.handle, index, count);
+}
+
 # install the key callback
 # ---
 # window:   window to observe
@@ -196,6 +262,30 @@ pub fun set_char_callback(window: Window, callback: CharFun) {
 # callback: handler, or nil cast to the callback type (e.g. nil::KeyFun) to clear
 pub fun set_char_mods_callback(window: Window, callback: CharModsFun) {
     c.glfwSetCharModsCallback(window.handle, callback);
+}
+
+# install the IME preedit callback
+# ---
+# window:   window to observe
+# callback: handler, or nil cast to the callback type (e.g. nil::KeyFun) to clear
+pub fun set_preedit_callback(window: Window, callback: PreeditFun) {
+    c.glfwSetPreeditCallback(window.handle, callback);
+}
+
+# install the IME on/off change callback
+# ---
+# window:   window to observe
+# callback: handler, or nil cast to the callback type (e.g. nil::KeyFun) to clear
+pub fun set_ime_status_callback(window: Window, callback: ImeStatusFun) {
+    c.glfwSetIMEStatusCallback(window.handle, callback);
+}
+
+# install the preedit candidate list callback
+# ---
+# window:   window to observe
+# callback: handler, or nil cast to the callback type (e.g. nil::KeyFun) to clear
+pub fun set_preedit_candidate_callback(window: Window, callback: PreeditCandidateFun) {
+    c.glfwSetPreeditCandidateCallback(window.handle, callback);
 }
 
 # install the mouse button callback

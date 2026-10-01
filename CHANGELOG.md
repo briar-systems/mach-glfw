@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-01
+
+### Added
+- IME support (#104): `set_preedit_callback` reports the composition as codepoints with its blocks, focused block and caret, and an empty composition when it ends; `set_preedit_cursor_rectangle` / `get_preedit_cursor_rectangle` place the candidate window in window coordinates. Also bound: preedit reset, text input focus, IME status, the Win32 candidate list, the `IME` input mode and the `MANAGE_PREEDIT_CANDIDATE` / `X11_ONTHESPOT` init hints. The vendored GLFW 3.4 carries the upstream IME work (clear-code/glfw `im-support`, glfw/glfw#2130) as a recorded patch, see `vendor/glfw/UPSTREAM`; the README has a per-platform table.
+
+### Fixed
+- The upstream IME patch's Wayland text-input v3 handler no longer re-commits the candidate rectangle on every done event, which looped forever under KWin (#104).
+
+### Changed
+- ci: the template ci and cd replace the toolkit pipeline, building the vendored GLFW on each host and testing the host target.
+- chore: the deprecated target `default` key is gone from the manifests, and every checkout keeps LF line endings.
+
 ## [0.10.0] - 2026-09-30
 
 ### Added
