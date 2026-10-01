@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-10-01
+
+### Fixed
+- `CFLocaleCopyPreferredLanguages`, which the IME patch's Cocoa code calls, is attributed to CoreFoundation, so a darwin consumer that links the window code no longer fails on an unattributed import (#109).
+
 ## [0.11.0] - 2026-10-01
 
 ### Added
