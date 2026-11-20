@@ -15,7 +15,7 @@ generate() {
 # `tools/surface.sh gen` after changing any split module's public surface.
 #
 # re-exports every binding under one namespace so consumers can write
-# `use glfw;` and reach the whole API as glfw.init(),
+# `use glfw.lib.glfw;` and reach the whole API as glfw.init(),
 # glfw.create_window(), glfw.KEY_ESCAPE, and so on. the split modules
 # (glfw.core, glfw.window, ...) remain importable individually.
 

@@ -1,8 +1,8 @@
 #!/bin/sh
 # switch mach.toml to the opt-in system GLFW in place of the vendored archive.
-# a consumer receives the library's exported link entries whatever the artifact
-# names, so the swap moves the export from [link.glfw-static] to the system
-# entries as well as swapping the artifact's own link list.
+# glfw.c attributes its imports to the [link.glfw] and [link.glfw-win] keys, so
+# the swap rewrites those two entries from the vendored archive to the system
+# library under the same keys, and every consumer receives them as before.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -10,11 +10,12 @@ python3 - mach.toml <<'PY'
 import re, sys
 path = sys.argv[1]
 lines = open(path).read().split("\n")
+vendored = 'path = "{project.work}/vendor/glfw/libglfw.a"'
 edits = {
-    ("artifact.glfw", '    "glfw-static",'): '    "glfw", "glfw-win",',
-    ("link.glfw-static", "export = true"): "export = false",
-    ("link.glfw", "export = false"): "export = true",
-    ("link.glfw-win", "export = false"): "export = true",
+    ("link.glfw", 'source = "local"'): 'source = "system"',
+    ("link.glfw", vendored): 'name = "glfw"',
+    ("link.glfw-win", 'source = "local"'): 'source = "system"',
+    ("link.glfw-win", vendored): 'name = "glfw3.dll"',
 }
 done = set()
 section = None

@@ -2,8 +2,8 @@
 # compile the vendored GLFW into a static archive for the active mach target.
 #   tools/build-glfw.sh <outdir>    writes <outdir>/libglfw.a
 #
-# mach exports MACH_TARGET_{ISA,OS,ABI} for the build cell. a target matching the
-# host in both os and isa builds with the system cc; anything else goes through zig cc, which
+# mach exports MACH_TARGET_{ARCH,SYS,ABI} for the build cell. a target matching the
+# host in both sys and arch builds with the system cc; anything else goes through zig cc, which
 # carries the cross sysroots. CC/AR/SYSROOT/MACOS_SDK override the defaults.
 #
 # the darwin backend is objective-c against the apple frameworks, so it builds
@@ -14,8 +14,8 @@ cd "$(dirname "$0")/.."
 
 OUT=${1:?usage: tools/build-glfw.sh <outdir>}
 SRC=vendor/glfw/src
-ISA=${MACH_TARGET_ISA:-x86_64}
-OS=${MACH_TARGET_OS:-linux}
+ARCH=${MACH_TARGET_ARCH:-x86_64}
+SYS=${MACH_TARGET_SYS:-linux}
 
 # units the platform-independent core always contributes
 CORE="context.c init.c input.c monitor.c platform.c vulkan.c window.c
@@ -31,16 +31,16 @@ Darwin) HOST=darwin ;;
 *)      HOST=other ;;
 esac
 
-# uname spells isas differently per os; normalize to mach's names
+# uname spells architectures differently per system; normalize to mach's names
 case $(uname -m) in
-x86_64|amd64)  HOST_ISA=x86_64 ;;
-arm64|aarch64) HOST_ISA=aarch64 ;;
-*)             HOST_ISA=$(uname -m) ;;
+x86_64|amd64)  HOST_ARCH=x86_64 ;;
+arm64|aarch64) HOST_ARCH=aarch64 ;;
+*)             HOST_ARCH=$(uname -m) ;;
 esac
 
-case $OS in
+case $SYS in
 linux)
-    TRIPLE=$ISA-linux-gnu
+    TRIPLE=$ARCH-linux-gnu
     # x11 and wayland are both compiled in; glfwInit picks one at runtime
     UNITS="$CORE posix_time.c posix_thread.c posix_module.c posix_poll.c
            linux_joystick.c xkb_unicode.c
@@ -52,14 +52,14 @@ linux)
     FLAGS="$FLAGS -fPIC"
     ;;
 windows)
-    TRIPLE=$ISA-windows-gnu
+    TRIPLE=$ARCH-windows-gnu
     UNITS="$CORE win32_time.c win32_thread.c win32_module.c
            win32_init.c win32_joystick.c win32_monitor.c win32_window.c
            wgl_context.c"
     DEFS="-D_GLFW_WIN32 -DUNICODE -D_UNICODE"
     ;;
 darwin)
-    TRIPLE=$ISA-macos
+    TRIPLE=$ARCH-macos
     UNITS="$CORE cocoa_time.c posix_thread.c posix_module.c
            cocoa_init.m cocoa_joystick.m cocoa_monitor.m cocoa_window.m
            nsgl_context.m"
@@ -67,12 +67,12 @@ darwin)
     [ -n "${MACOS_SDK:-}" ] && FLAGS="$FLAGS -isysroot $MACOS_SDK"
     ;;
 *)
-    echo "build-glfw: unsupported target os '$OS'" >&2
+    echo "build-glfw: unsupported target sys '$SYS'" >&2
     exit 1
     ;;
 esac
 
-if [ "$OS" = "$HOST" ] && [ "$ISA" = "$HOST_ISA" ]; then
+if [ "$SYS" = "$HOST" ] && [ "$ARCH" = "$HOST_ARCH" ]; then
     CC=${CC:-cc}
     AR=${AR:-ar}
     TFLAG=
@@ -88,7 +88,7 @@ mkdir -p "$OUT"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-if [ "$OS" = linux ]; then
+if [ "$SYS" = linux ]; then
     # the x11/wayland/xkbcommon headers come from the system; -idirafter keeps
     # them below the toolchain's own libc headers. SYSROOT retargets them.
     for d in $(pkg-config --cflags-only-I x11 xkbcommon wayland-client wayland-egl 2>/dev/null |

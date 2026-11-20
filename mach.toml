@@ -1,167 +1,164 @@
 [project]
 id = "glfw"
 version = "0.11.2"
-mach = "^6"
+mach = "^7"
 src = "src"
-out = "out/{target.name}/{profile.name}"
+work = "out/{target.name}/{profile.name}"
 
 [target.linux-x86_64]
-isa = "x86_64"
-os  = "linux"
-abi = "sysv64"
+arch = "x86_64"
+sys  = "linux"
+env  = "gnu"
+abi  = "sysv64"
 
 [target.linux-arm64]
-isa = "aarch64"
-os  = "linux"
-abi = "aapcs64"
+arch = "aarch64"
+sys  = "linux"
+env  = "gnu"
+abi  = "aapcs64"
 
 [target.windows]
-isa = "x86_64"
-os  = "windows"
-abi = "win64"
+arch = "x86_64"
+sys  = "windows"
+abi  = "win64"
 
 [target.darwin]
-isa = "x86_64"
-os  = "darwin"
-abi = "sysv64"
+arch = "x86_64"
+sys  = "darwin"
+abi  = "sysv64"
 
 [profile.debug]
 default = true
-opt = 0
+optimize = false
 debug = true
 simd = "scalarize"
-vectorize = false
-float_reassoc = false
 
 [profile.release]
-opt = 2
+optimize = true
 debug = false
 simd = "scalarize"
-vectorize = false
-float_reassoc = false
 
 [artifact.glfw]
 kind = "static"
 entry = "lib/glfw.mach"
-out = "lib/glfw{artifact.suffix}"
+out = "{project.work}/lib/glfw{artifact.suffix}"
 targets = ["*"]
 # mach tests an artifact's closure with that artifact's links, so the library
 # names everything the vendored archive needs for `mach test .` to link
 link = [
-    "glfw-static",
+    "glfw", "glfw-win",
     "mingw32", "compiler-rt",
-    "pthread", "m", "dl", "rt",
+    "c", "pthread", "m", "dl", "rt",
     "gdi32", "user32", "shell32", "kernel32",
     "ucrt-heap", "ucrt-string", "ucrt-convert", "ucrt-utility",
     "ucrt-math", "ucrt-private", "ucrt-stdio",
-    "libSystem", "objc",
+    "libsystem", "objc",
     "Cocoa", "AppKit", "Foundation", "CoreGraphics", "CoreServices",
     "IOKit", "CoreFoundation", "CoreVideo", "OpenGL",
 ]
 need = []
 default = true
-
-[link.glfw-static]
-source = "local"
-path = "{project.out}/vendor/glfw/libglfw.a"
-os = ["linux", "windows", "darwin"]
-isa = "*"
-abi = "*"
 export = true
 
-# opt-in fallback: tools/system-glfw.sh swaps "glfw-static" for "glfw"/"glfw-win"
-# in the artifact's link list and moves the export onto them, so this project and
-# its consumers link a system-installed GLFW instead of the vendored one
+# the vendored archive. glfw.c attributes every import to "glfw", or to "glfw-win"
+# on windows, so these keys stay the library's identity whichever GLFW provides
+# it. the opt-in tools/system-glfw.sh rewrites both entries to a system-installed
+# GLFW (glfw, glfw3.dll) under the same keys
 [link.glfw]
-source = "system"
-name = "glfw"
-library = "glfw"
-os = ["linux", "darwin"]
-isa = "*"
-abi = "*"
-export = false
+source = "local"
+path = "{project.work}/vendor/glfw/libglfw.a"
+sys = ["linux", "darwin"]
+arch = ["*"]
+abi = ["*"]
+export = true
 
 [link.glfw-win]
-source = "system"
-name = "glfw3.dll"
-library = "glfw"
-os = ["windows"]
-isa = "*"
-abi = "*"
-export = false
+source = "local"
+path = "{project.work}/vendor/glfw/libglfw.a"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
+export = true
 
 # zig's mingw wrappers supply C functions that UCRT does not export directly;
 # compiler-rt supplies the compiler builtins used by the archive
 [link.mingw32]
 source = "local"
-path = "{project.out}/vendor/mingw/libmingw32.lib"
-os = ["windows"]
-isa = "*"
-abi = "*"
+path = "{project.work}/vendor/mingw/libmingw32.lib"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.compiler-rt]
 source = "local"
-path = "{project.out}/vendor/mingw/compiler_rt.lib"
-os = ["windows"]
-isa = "*"
-abi = "*"
+path = "{project.work}/vendor/mingw/compiler_rt.lib"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
-# the static archive carries these itself; a system libglfw.so resolved them
-# transitively. X11/wayland/GL are dlopen'd at runtime, so they are not linked.
+# the static archive needs these itself; a system libglfw.so resolved them
+# transitively. the link reaches no symbol through a library's own needs, so libc
+# is named too. X11/wayland/GL are dlopen'd at runtime, so they are not linked.
+[link.c]
+source = "system"
+name = "c"
+sys = ["linux"]
+arch = ["*"]
+abi = ["*"]
+export = true
+
 [link.pthread]
 source = "system"
 name = "pthread"
-os = ["linux"]
-isa = "*"
-abi = "*"
+sys = ["linux"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.m]
 source = "system"
 name = "m"
-os = ["linux"]
-isa = "*"
-abi = "*"
+sys = ["linux"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.dl]
 source = "system"
 name = "dl"
-os = ["linux"]
-isa = "*"
-abi = "*"
+sys = ["linux"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.rt]
 source = "system"
 name = "rt"
-os = ["linux"]
-isa = "*"
-abi = "*"
+sys = ["linux"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 # the four DLLs GLFW's win32 backend imports directly
 [link.gdi32]
 source = "system"
 name = "gdi32.dll"
-library = "gdi32.dll"
 symbols = [
     "ChoosePixelFormat", "CreateBitmap", "CreateDCW", "CreateDIBSection",
     "CreateRectRgn", "DeleteDC", "DeleteObject", "DescribePixelFormat",
     "GetDeviceCaps", "GetDeviceGammaRamp", "SetDeviceGammaRamp",
     "SetPixelFormat", "SwapBuffers",
 ]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.user32]
 source = "system"
 name = "user32.dll"
-library = "user32.dll"
 symbols = [
     "AdjustWindowRectEx", "BringWindowToTop", "ChangeDisplaySettingsExW",
     "ClientToScreen", "ClipCursor", "CloseClipboard", "CreateIconIndirect",
@@ -187,25 +184,23 @@ symbols = [
     "TranslateMessage", "UnregisterClassW", "UnregisterDeviceNotification",
     "WaitMessage", "WindowFromPoint",
 ]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.shell32]
 source = "system"
 name = "shell32.dll"
-library = "shell32.dll"
 symbols = ["DragAcceptFiles", "DragFinish", "DragQueryFileW", "DragQueryPoint"]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.kernel32]
 source = "system"
 name = "kernel32.dll"
-library = "kernel32.dll"
 symbols = [
     "DeleteCriticalSection", "EnterCriticalSection", "FormatMessageW",
     "FreeLibrary", "GetLastError", "GetModuleHandleExW", "GetModuleHandleW",
@@ -217,9 +212,9 @@ symbols = [
     "TlsGetValue", "TlsSetValue", "VerSetConditionMask",
     "WideCharToMultiByte",
 ]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 # the dynamic half of GLFW's C runtime surface. the remaining memcpy, memmove,
@@ -228,9 +223,9 @@ export = true
 source = "system"
 name = "api-ms-win-crt-heap-l1-1-0.dll"
 symbols = ["malloc", "free", "realloc"]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.ucrt-string]
@@ -240,61 +235,60 @@ symbols = [
     "strcmp", "strcpy", "strcspn", "strncmp", "strncpy",
     "strspn", "strtok", "wcscmp", "wcscpy", "wcslen",
 ]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.ucrt-convert]
 source = "system"
 name = "api-ms-win-crt-convert-l1-1-0.dll"
 symbols = ["strtol", "strtoul"]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.ucrt-utility]
 source = "system"
 name = "api-ms-win-crt-utility-l1-1-0.dll"
 symbols = ["qsort"]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.ucrt-math]
 source = "system"
 name = "api-ms-win-crt-math-l1-1-0.dll"
 symbols = ["powf"]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.ucrt-private]
 source = "system"
 name = "api-ms-win-crt-private-l1-1-0.dll"
 symbols = ["strstr"]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.ucrt-stdio]
 source = "system"
 name = "api-ms-win-crt-stdio-l1-1-0.dll"
 symbols = ["__stdio_common_vsprintf", "__stdio_common_vsscanf"]
-os = ["windows"]
-isa = "*"
-abi = "*"
+sys = ["windows"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 # the logical name matches std's, so a symbol both claim names one provider
-[link.libSystem]
+[link.libsystem]
 source = "system"
 name = "/usr/lib/libSystem.B.dylib"
-library = "libSystem"
 symbols = [
     "__assert_rtn", "__bzero", "__memcpy_chk", "__sprintf_chk",
     "__stack_chk_fail", "__stack_chk_guard", "_NSConcreteGlobalBlock",
@@ -308,15 +302,14 @@ symbols = [
     "strspn", "strstr", "strtok", "strtol", "strtoul", "usleep",
     "vsnprintf",
 ]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.objc]
 source = "system"
 name = "/usr/lib/libobjc.A.dylib"
-library = "/usr/lib/libobjc.A.dylib"
 symbols = [
     "OBJC_CLASS_$_NSObject", "OBJC_METACLASS_$_NSObject",
     "_objc_empty_cache", "objc_alloc", "objc_alloc_init", "objc_autorelease",
@@ -325,17 +318,17 @@ symbols = [
     "objc_msgSend_stret", "objc_opt_class", "objc_opt_isKindOfClass",
     "objc_opt_respondsToSelector", "objc_release", "objc_retain",
 ]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.Cocoa]
 source = "framework"
 name = "Cocoa"
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.AppKit]
@@ -356,9 +349,9 @@ symbols = [
     "OBJC_CLASS_$_NSView", "OBJC_CLASS_$_NSWindow",
     "OBJC_METACLASS_$_NSView", "OBJC_METACLASS_$_NSWindow",
 ]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.Foundation]
@@ -371,9 +364,9 @@ symbols = [
     "OBJC_CLASS_$_NSNotificationCenter", "OBJC_CLASS_$_NSString",
     "OBJC_CLASS_$_NSThread",
 ]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.CoreGraphics]
@@ -396,18 +389,18 @@ symbols = [
     "CGReleaseDisplayFadeReservation", "CGSetDisplayTransferByTable",
     "CGWarpMouseCursorPosition",
 ]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.CoreServices]
 source = "framework"
 name = "CoreServices"
 symbols = ["UCKeyTranslate"]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.CoreFoundation]
@@ -436,9 +429,9 @@ symbols = [
     "kCFAllocatorNull", "kCFRunLoopDefaultMode", "kCFTypeArrayCallBacks",
     "kCFTypeDictionaryKeyCallBacks", "kCFTypeDictionaryValueCallBacks",
 ]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.IOKit]
@@ -458,47 +451,47 @@ symbols = [
     "IORegistryEntryCreateCFProperty", "IOServiceGetMatchingServices",
     "IOServiceMatching",
 ]
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.CoreVideo]
 source = "framework"
 name = "CoreVideo"
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [link.OpenGL]
 source = "framework"
 name = "OpenGL"
-os = ["darwin"]
-isa = "*"
-abi = "*"
+sys = ["darwin"]
+arch = ["*"]
+abi = ["*"]
 export = true
 
 [step.build-glfw]
-argv = ["bash", "tools/build-glfw.sh", "{project.out}/vendor/glfw"]
+argv = ["bash", "tools/build-glfw.sh", "{project.work}/vendor/glfw"]
 in = [
     "tools/build-glfw.sh",
     "vendor/glfw/include/GLFW/*",
     "vendor/glfw/src/*",
     "vendor/glfw/deps/wayland/*",
 ]
-out = ["{project.out}/vendor/glfw/libglfw.a"]
+out = ["{project.work}/vendor/glfw/libglfw.a"]
 need = []
 
 [step.mingw-runtime]
-argv = ["bash", "tools/materialize-mingw-runtime.sh", "{project.out}/vendor/mingw/libmingw32.lib", "{project.out}/vendor/mingw/compiler_rt.lib"]
+argv = ["bash", "tools/materialize-mingw-runtime.sh", "{project.work}/vendor/mingw/libmingw32.lib", "{project.work}/vendor/mingw/compiler_rt.lib"]
 in = ["tools/materialize-mingw-runtime.sh"]
 out = [
-    "{project.out}/vendor/mingw/libmingw32.lib",
-    "{project.out}/vendor/mingw/compiler_rt.lib",
+    "{project.work}/vendor/mingw/libmingw32.lib",
+    "{project.work}/vendor/mingw/compiler_rt.lib",
 ]
 need = []
 
 [dep.std]
 git = "https://github.com/briar-systems/mach-std"
-version = "^9.0"
+ref = "branch/dev"

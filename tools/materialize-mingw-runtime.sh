@@ -5,12 +5,12 @@ set -eu
 mingw_out=${1:?usage: tools/materialize-mingw-runtime.sh <mingw-out> <compiler-rt-out>}
 compiler_rt_out=${2:?usage: tools/materialize-mingw-runtime.sh <mingw-out> <compiler-rt-out>}
 zig=${ZIG:-zig}
-isa=${MACH_TARGET_ISA:-x86_64}
+arch=${MACH_TARGET_ARCH:-x86_64}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 printf 'int main(void) { return 0; }\n' >"$tmp/probe.c"
-if ! "$zig" cc -v -target "$isa-windows-gnu" -O2 -s \
+if ! "$zig" cc -v -target "$arch-windows-gnu" -O2 -s \
     "$tmp/probe.c" -o "$tmp/probe.exe" >"$tmp/stdout" 2>"$tmp/link.log"; then
     cat "$tmp/stdout" "$tmp/link.log" >&2
     exit 1
